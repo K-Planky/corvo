@@ -22,10 +22,11 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- DataSource + JdbcTemplate. JDBC only for now; JPA/Hibernate arrives in M2. -->
+        <!-- Hibernate / Spring Data JPA (M2). Brings spring-jdbc transitively, so JdbcTemplate
+             (used by the Flyway migration test) is still autoconfigured. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
         <!-- Flyway migrations (db/migration). Spring Boot 4 extracted the Flyway autoconfiguration

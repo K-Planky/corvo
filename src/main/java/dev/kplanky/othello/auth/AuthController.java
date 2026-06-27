@@ -1,6 +1,7 @@
 package dev.kplanky.othello.auth;
 
 import dev.kplanky.othello.auth.dto.AuthResponse;
+import dev.kplanky.othello.auth.dto.LoginRequest;
 import dev.kplanky.othello.auth.dto.RegisterRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -10,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Auth endpoints (spec §9/§10). Login lands in M3.2. */
+/** Auth endpoints (spec §9/§10). */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -25,5 +26,10 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
+    }
+
+    @PostMapping("/login")
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 }

@@ -127,6 +127,18 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- Tests need JWT_SECRET (no in-source default since M3.3); inject an obviously-fake
+                 test-only value here as a real env var so the ${JWT_SECRET} placeholder resolves.
+                 Datasource creds are unneeded: Testcontainers @ServiceConnection overrides them. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <JWT_SECRET>test-only-jwt-signing-secret-not-used-in-production-0123456789</JWT_SECRET>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

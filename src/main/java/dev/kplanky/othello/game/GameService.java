@@ -13,6 +13,7 @@ import dev.kplanky.othello.engine.Search;
 import dev.kplanky.othello.engine.othello.OthelloMove;
 import dev.kplanky.othello.engine.othello.OthelloState;
 import dev.kplanky.othello.game.dto.GameStateResponse;
+import dev.kplanky.othello.game.dto.MoveResponse;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
 import dev.kplanky.othello.repository.UserRepository;
@@ -89,7 +90,7 @@ public class GameService {
             applyToGame(game, botSearch.bestMove(mapper.toState(game)));
         }
 
-        return GameStateResponse.from(game);
+        return toResponse(game, userId);
     }
 
     /**
@@ -101,7 +102,7 @@ public class GameService {
     public GameStateResponse applyMove(UUID gameId, OthelloMove move) {
         Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
         applyToGame(game, move);
-        return GameStateResponse.from(game);
+        return toResponse(game, null);
     }
 
     /**
@@ -116,11 +117,37 @@ public class GameService {
      * open.
      */
     @Transactional
-    public GameStateResponse submitMove(UUID gameId, OthelloMove move) {
+    public GameStateResponse submitMove(UUID gameId, UUID callerId, OthelloMove move) {
         Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
         applyToGame(game, move);
         playBotReplyIfDue(game);
-        return GameStateResponse.from(game);
+        return toResponse(game, callerId);
+    }
+
+    /** Current state of {@code gameId} as seen by {@code callerId} (their legal moves included). */
+    @Transactional(readOnly = true)
+    public GameStateResponse getGameState(UUID gameId, UUID callerId) {
+        Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
+        return toResponse(game, callerId);
+    }
+
+    /** The full ordered move history of {@code gameId} (spec §9 replay). */
+    @Transactional(readOnly = true)
+    public List<MoveResponse> getMoveHistory(UUID gameId) {
+        if (!games.existsById(gameId)) {
+            throw new GameNotFoundException(gameId);
+        }
+        return moves.findByGameIdOrderByMoveNumberAsc(gameId).stream()
+                .map(MoveResponse::from)
+                .toList();
+    }
+
+    /** The caller's games, optionally filtered by {@code status} ({@code null} ⇒ all) — newest first. */
+    @Transactional(readOnly = true)
+    public List<GameStateResponse> listGames(UUID callerId, GameStatus status) {
+        return games.findForUser(callerId, status).stream()
+                .map(game -> toResponse(game, callerId))
+                .toList();
     }
 
     /**
@@ -212,6 +239,40 @@ public class GameService {
     /** The player id seated on {@code side}, or {@code null} when that side is the bot. */
     private static UUID playerId(Game game, Player side) {
         return side == Player.BLACK ? game.getBlackPlayerId() : game.getWhitePlayerId();
+    }
+
+    /** Builds the state view for {@code callerId}, including the moves they may currently play. */
+    private GameStateResponse toResponse(Game game, UUID callerId) {
+        return GameStateResponse.of(game, legalMovesFor(game, callerId));
+    }
+
+    /**
+     * The square indices {@code callerId} may legally play right now — empty unless the game is
+     * {@code IN_PROGRESS} and it is the caller's turn (an empty list then means they must pass).
+     */
+    private List<Integer> legalMovesFor(Game game, UUID callerId) {
+        if (game.getStatus() != GameStatus.IN_PROGRESS) {
+            return List.of();
+        }
+        Player side = sideOf(game, callerId);
+        if (side == null || game.getCurrentTurn() != side) {
+            return List.of();
+        }
+        return rules.getLegalMoves(mapper.toState(game)).stream().map(OthelloMove::square).toList();
+    }
+
+    /** The side {@code userId} plays in {@code game}, or {@code null} if they are not a participant. */
+    private static Player sideOf(Game game, UUID userId) {
+        if (userId == null) {
+            return null;
+        }
+        if (userId.equals(game.getBlackPlayerId())) {
+            return Player.BLACK;
+        }
+        if (userId.equals(game.getWhitePlayerId())) {
+            return Player.WHITE;
+        }
+        return null;
     }
 
     /** The {@link Player} the bot plays, or {@code null} when there is no bot ({@code BotSide.NONE}). */

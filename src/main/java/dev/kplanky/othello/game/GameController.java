@@ -1,18 +1,30 @@
 package dev.kplanky.othello.game;
 
 import dev.kplanky.othello.auth.JwtService.JwtPrincipal;
+import dev.kplanky.othello.domain.GameStatus;
 import dev.kplanky.othello.game.dto.CreateGameRequest;
 import dev.kplanky.othello.game.dto.GameStateResponse;
+import dev.kplanky.othello.game.dto.MoveResponse;
+import dev.kplanky.othello.game.dto.SubmitMoveRequest;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Game endpoints (spec §9). Creation lands here in M4.1; the read/move endpoints arrive in M4.4. */
+/**
+ * Game REST endpoints (spec §9). All require a valid JWT; the participant/turn anti-cheat on move
+ * submission is layered on in M4.5, and the synchronous AI reply on {@code POST .../moves} moves to
+ * an async WebSocket push in M8.
+ */
 @RestController
 @RequestMapping("/api/games")
 public class GameController {
@@ -29,5 +41,31 @@ public class GameController {
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody CreateGameRequest request) {
         return gameService.createVsAiGame(principal.userId(), request.difficulty(), request.botSide());
+    }
+
+    @GetMapping("/{id}")
+    public GameStateResponse get(
+            @AuthenticationPrincipal JwtPrincipal principal, @PathVariable UUID id) {
+        return gameService.getGameState(id, principal.userId());
+    }
+
+    @GetMapping("/{id}/moves")
+    public List<MoveResponse> moveHistory(@PathVariable UUID id) {
+        return gameService.getMoveHistory(id);
+    }
+
+    @PostMapping("/{id}/moves")
+    public GameStateResponse submitMove(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody SubmitMoveRequest request) {
+        return gameService.submitMove(id, principal.userId(), request.toMove());
+    }
+
+    @GetMapping
+    public List<GameStateResponse> myGames(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @RequestParam(required = false) GameStatus status) {
+        return gameService.listGames(principal.userId(), status);
     }
 }

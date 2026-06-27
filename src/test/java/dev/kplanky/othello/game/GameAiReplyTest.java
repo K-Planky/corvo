@@ -68,7 +68,7 @@ class GameAiReplyTest {
         UUID gameId = gameService.createVsAiGame(humanId, BotDifficulty.EASY, BotSide.WHITE).id();
         OthelloMove humanMove = rules.getLegalMoves(OthelloState.initial()).get(0);
 
-        var response = gameService.submitMove(gameId, humanMove);
+        var response = gameService.submitMove(gameId, humanId, humanMove);
 
         Game game = games.findById(gameId).orElseThrow();
         assertThat(game.getMoveCount()).isEqualTo(2); // human move + bot reply
@@ -93,7 +93,7 @@ class GameAiReplyTest {
         assertThat(created.getMoveCount()).isEqualTo(1);
 
         OthelloMove humanMove = rules.getLegalMoves(mapper.toState(created)).get(0);
-        gameService.submitMove(gameId, humanMove);
+        gameService.submitMove(gameId, humanId, humanMove);
 
         Game game = games.findById(gameId).orElseThrow();
         assertThat(game.getMoveCount()).isEqualTo(3); // bot open + human + bot reply
@@ -123,7 +123,7 @@ class GameAiReplyTest {
         // Sanity: the human's only legal move is d1 (square 3).
         assertThat(rules.getLegalMoves(mapper.toState(crafted))).containsExactly(OthelloMove.at(3));
 
-        gameService.submitMove(gameId, OthelloMove.at(3));
+        gameService.submitMove(gameId, humanId, OthelloMove.at(3));
 
         Game game = games.findById(gameId).orElseThrow();
         assertThat(game.getStatus()).isEqualTo(GameStatus.IN_PROGRESS);
@@ -151,7 +151,7 @@ class GameAiReplyTest {
         int guard = 0;
         while (game.getStatus() == GameStatus.IN_PROGRESS) {
             List<OthelloMove> legal = rules.getLegalMoves(mapper.toState(game));
-            gameService.submitMove(gameId, legal.isEmpty() ? OthelloMove.pass() : legal.get(0));
+            gameService.submitMove(gameId, humanId, legal.isEmpty() ? OthelloMove.pass() : legal.get(0));
             game = games.findById(gameId).orElseThrow();
             assertThat(++guard).isLessThan(200);
         }

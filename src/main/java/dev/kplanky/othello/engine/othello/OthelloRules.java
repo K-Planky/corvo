@@ -10,8 +10,9 @@ import java.util.function.LongUnaryOperator;
 
 /**
  * Othello implementation of {@link GameRules} (spec §6). Built incrementally across Milestone 1:
- * the generic seam, legal-move generation, disc flipping for placements and the forced-pass rule
- * are in place; terminal detection and winner determination land in subsequent tasks.
+ * the generic seam, legal-move generation, disc flipping for placements, the forced-pass rule and
+ * terminal detection / winner determination are in place. The full {@link GameRules} contract is now
+ * implemented; later Milestone-1 tasks add the {@code Evaluator} seam and a randomized playout test.
  */
 public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
 
@@ -123,13 +124,45 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
         return captured;
     }
 
+    /** Every square occupied — all 64 bits set. */
+    private static final long FULL_BOARD = -1L;
+
+    /**
+     * Whether the game has ended (spec §6/§14). Exactly two terminal conditions:
+     *
+     * <ul>
+     *   <li><b>Double pass</b> — both players passed in succession ({@code consecutivePasses == 2}).
+     *       A <em>single</em> pass does not end the game.</li>
+     *   <li><b>Board full</b> — every square is occupied.</li>
+     * </ul>
+     *
+     * <p>A wipeout (one side reduced to zero discs) is <em>not</em> a special terminal rule: the
+     * wiped side has no legal move, so it passes, and the game still resolves through the double-pass
+     * or board-full path above (the spec pins this explicitly).
+     */
     @Override
     public boolean isTerminal(OthelloState state) {
-        throw new UnsupportedOperationException("isTerminal arrives in M1.5 (terminal detection)");
+        return state.consecutivePasses() >= 2 || state.occupied() == FULL_BOARD;
     }
 
+    /**
+     * The winner of a terminal game, or empty for a draw <em>or</em> a non-terminal state (spec
+     * §6/§14). The winner is simply whoever holds more discs; an equal count is a draw. This also
+     * resolves a wipeout correctly — the surviving side has strictly more discs.
+     */
     @Override
     public Optional<Player> winner(OthelloState state) {
-        throw new UnsupportedOperationException("winner arrives in M1.5 (winner determination)");
+        if (!isTerminal(state)) {
+            return Optional.empty();
+        }
+        int black = state.count(Player.BLACK);
+        int white = state.count(Player.WHITE);
+        if (black > white) {
+            return Optional.of(Player.BLACK);
+        }
+        if (white > black) {
+            return Optional.of(Player.WHITE);
+        }
+        return Optional.empty(); // equal disc counts ⇒ draw
     }
 }

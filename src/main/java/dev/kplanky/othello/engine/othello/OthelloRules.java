@@ -10,8 +10,8 @@ import java.util.function.LongUnaryOperator;
 
 /**
  * Othello implementation of {@link GameRules} (spec §6). Built incrementally across Milestone 1:
- * the generic seam, legal-move generation and disc flipping for placements are in place; the pass
- * rule, terminal detection and winner determination land in subsequent tasks.
+ * the generic seam, legal-move generation, disc flipping for placements and the forced-pass rule
+ * are in place; terminal detection and winner determination land in subsequent tasks.
  */
 public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
 
@@ -65,7 +65,16 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
     @Override
     public OthelloState applyMove(OthelloState state, OthelloMove move) {
         if (move.isPass()) {
-            throw new UnsupportedOperationException("pass handling arrives in M1.4 (forced-pass rule)");
+            // A pass is legal only when the side to move has no legal placement (spec §6/§14). A
+            // player with ≥1 legal move may not pass; the engine rejects such an illegal pass (this
+            // is what the §9 "illegal pass" 422 rule presupposes). A legal pass flips nothing,
+            // advances the turn, and increments the consecutive-pass counter that drives double-pass
+            // termination (M1.5).
+            if (legalMoveMask(state) != 0L) {
+                throw new IllegalArgumentException("illegal pass: the side to move has a legal move");
+            }
+            return new OthelloState(
+                    state.black(), state.white(), state.toMove().opponent(), state.consecutivePasses() + 1);
         }
         int square = move.square();
         if ((state.occupied() & OthelloState.bit(square)) != 0L) {
@@ -82,8 +91,8 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
         long theirs = state.discs(mover.opponent()) & ~flipped;
         long black = mover == Player.BLACK ? mine : theirs;
         long white = mover == Player.BLACK ? theirs : mine;
-        // A real placement always resets the consecutive-pass counter (only passes increment it,
-        // which lands in M1.4); turn passes to the opponent.
+        // A real placement always resets the consecutive-pass counter (only a pass increments it);
+        // turn passes to the opponent.
         return new OthelloState(black, white, mover.opponent(), 0);
     }
 

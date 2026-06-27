@@ -1,0 +1,9 @@
+-- V1 baseline (Milestone 0). Intentionally empty.
+--
+-- This migration exists only to establish the Flyway baseline and prove the
+-- DB + Flyway + Testcontainers path end-to-end. Flyway still records it in
+-- flyway_schema_history, which the M0.2 integration test asserts.
+--
+-- The real schema (User, Game, Move, RatingHistory + indexes) arrives in
+-- V2__core_schema.sql during Milestone 2. Never edit an applied migration —
+-- add a new versioned file instead.

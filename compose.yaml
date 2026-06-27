@@ -1,0 +1,22 @@
+# Local development database. Integration tests do NOT use this — they spin up their own
+# Postgres via Testcontainers. Bring it up with `docker compose up -d` before `./mvnw spring-boot:run`.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: othello-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-othello}
+      POSTGRES_USER: ${DB_USER:-othello}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-othello}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - othello-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-othello} -d ${DB_NAME:-othello}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  othello-pgdata:

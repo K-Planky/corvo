@@ -10,8 +10,8 @@ import java.util.function.LongUnaryOperator;
 
 /**
  * Othello implementation of {@link GameRules} (spec §6). Built incrementally across Milestone 1:
- * this task wires the generic seam plus legal-move generation; disc flipping, the pass rule,
- * terminal detection and winner determination land in subsequent tasks.
+ * the generic seam, legal-move generation and disc flipping for placements are in place; the pass
+ * rule, terminal detection and winner determination land in subsequent tasks.
  */
 public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
 
@@ -64,7 +64,54 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
 
     @Override
     public OthelloState applyMove(OthelloState state, OthelloMove move) {
-        throw new UnsupportedOperationException("applyMove arrives in M1.3 (disc flipping)");
+        if (move.isPass()) {
+            throw new UnsupportedOperationException("pass handling arrives in M1.4 (forced-pass rule)");
+        }
+        int square = move.square();
+        if ((state.occupied() & OthelloState.bit(square)) != 0L) {
+            throw new IllegalArgumentException("illegal move: square " + square + " is occupied");
+        }
+        long flipped = flips(state, square);
+        if (flipped == 0L) {
+            throw new IllegalArgumentException("illegal move: square " + square + " brackets nothing");
+        }
+
+        Player mover = state.toMove();
+        long placed = OthelloState.bit(square);
+        long mine = state.discs(mover) | placed | flipped;
+        long theirs = state.discs(mover.opponent()) & ~flipped;
+        long black = mover == Player.BLACK ? mine : theirs;
+        long white = mover == Player.BLACK ? theirs : mine;
+        // A real placement always resets the consecutive-pass counter (only passes increment it,
+        // which lands in M1.4); turn passes to the opponent.
+        return new OthelloState(black, white, mover.opponent(), 0);
+    }
+
+    /**
+     * Bitboard of opponent discs flipped by placing a disc on {@code square} (0..63) for the side to
+     * move. Empty (0) means the placement brackets nothing — i.e. it is not a legal move.
+     *
+     * <p>For each of the eight directions, walk the contiguous run of opponent discs starting just
+     * past {@code square}; if that run is terminated by one of the mover's own discs, the whole run
+     * is captured. All shifts are edge-masked, so a run never wraps across a board edge.
+     */
+    static long flips(OthelloState state, int square) {
+        long mine = state.discs(state.toMove());
+        long theirs = state.discs(state.toMove().opponent());
+        long placed = OthelloState.bit(square);
+
+        long captured = 0L;
+        for (LongUnaryOperator shift : Bitboards.DIRECTIONS) {
+            long run = shift.applyAsLong(placed) & theirs;
+            for (int i = 0; i < 5; i++) { // a run spans at most 6 opponent discs in a line of 8
+                run |= shift.applyAsLong(run) & theirs;
+            }
+            // The run flips only if the square just past its far end holds one of our discs.
+            if ((shift.applyAsLong(run) & mine) != 0L) {
+                captured |= run;
+            }
+        }
+        return captured;
     }
 
     @Override

@@ -84,8 +84,8 @@ public class Game {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    /** JPA requires a no-arg constructor. */
-    protected Game() {}
+    /** Public no-arg constructor: JPA requires one, and services build a game via the setters. */
+    public Game() {}
 
     public UUID getId() {
         return id;

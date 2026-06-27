@@ -16,6 +16,7 @@ import dev.kplanky.othello.game.dto.GameStateResponse;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
 import dev.kplanky.othello.repository.UserRepository;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -104,6 +105,46 @@ public class GameService {
     }
 
     /**
+     * The vs-AI human-submit flow (spec §7/§9): applies the human's {@code move} and then, if it is
+     * now the bot's turn and the game is still live, plays the bot's reply through the same
+     * transactional pipeline — so terminal handling and persistence are identical for human and bot
+     * moves. The bot plays a uniformly random legal move (ladder rung 1, {@link Search}/RandomBot),
+     * or passes when it has no legal move.
+     *
+     * <p>The reply is synchronous here: a deliberate single-player-slice simplification. M8 moves it
+     * off-thread and pushes it over WebSocket so a slow ({@code HARD}) search never holds the request
+     * open.
+     */
+    @Transactional
+    public GameStateResponse submitMove(UUID gameId, OthelloMove move) {
+        Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
+        applyToGame(game, move);
+        playBotReplyIfDue(game);
+        return GameStateResponse.from(game);
+    }
+
+    /**
+     * Plays the bot's reply when it is due: a {@code HUMAN_VS_AI} game that is still in progress and
+     * now on the bot's side. The bot makes exactly one move — a random legal move, or a pass when it
+     * has none — through {@link #applyToGame}. After the bot moves the turn returns to the human, so
+     * at most one reply is ever owed per human submission.
+     */
+    private void playBotReplyIfDue(Game game) {
+        if (game.getOpponentType() != OpponentType.HUMAN_VS_AI
+                || game.getStatus() != GameStatus.IN_PROGRESS) {
+            return;
+        }
+        Player botPlayer = botPlayer(game.getBotSide());
+        if (botPlayer == null || game.getCurrentTurn() != botPlayer) {
+            return; // not the bot's turn (e.g. the human's move was terminal, or it's the human's turn)
+        }
+        OthelloState state = mapper.toState(game);
+        List<OthelloMove> legal = rules.getLegalMoves(state);
+        OthelloMove botMove = legal.isEmpty() ? OthelloMove.pass() : botSearch.bestMove(state);
+        applyToGame(game, botMove);
+    }
+
+    /**
      * Core move primitive (shared by creation's opening move, human moves, and the AI reply): reads
      * the engine state from {@code game}, applies {@code move} (the engine validates legality),
      * persists the {@link Move} row and the new board/{@code moveCount}, and resolves the outcome if
@@ -171,5 +212,14 @@ public class GameService {
     /** The player id seated on {@code side}, or {@code null} when that side is the bot. */
     private static UUID playerId(Game game, Player side) {
         return side == Player.BLACK ? game.getBlackPlayerId() : game.getWhitePlayerId();
+    }
+
+    /** The {@link Player} the bot plays, or {@code null} when there is no bot ({@code BotSide.NONE}). */
+    private static Player botPlayer(BotSide botSide) {
+        return switch (botSide) {
+            case BLACK -> Player.BLACK;
+            case WHITE -> Player.WHITE;
+            case NONE -> null;
+        };
     }
 }

@@ -3,8 +3,10 @@ package dev.kplanky.othello.game;
 import dev.kplanky.othello.domain.BotDifficulty;
 import dev.kplanky.othello.domain.BotSide;
 import dev.kplanky.othello.domain.Game;
+import dev.kplanky.othello.domain.GameStatus;
 import dev.kplanky.othello.domain.Move;
 import dev.kplanky.othello.domain.OpponentType;
+import dev.kplanky.othello.domain.User;
 import dev.kplanky.othello.engine.GameRules;
 import dev.kplanky.othello.engine.Player;
 import dev.kplanky.othello.engine.Search;
@@ -13,20 +15,25 @@ import dev.kplanky.othello.engine.othello.OthelloState;
 import dev.kplanky.othello.game.dto.GameStateResponse;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.UserRepository;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Game orchestration (spec §4/§9). Owns the mapping between the engine and the persisted {@link Game}
- * and is the single place that mutates a game's position. This first slice covers vs-AI game
- * creation; transactional move application, the AI reply, and authorization land in later M4 tasks.
+ * Game orchestration (spec §4/§9/§11). Owns the mapping between the engine and the persisted
+ * {@link Game} and is the single place that mutates a game's position. Move application validates
+ * legality through the engine, persists the new board + {@link Move} row + {@code moveCount}, and on
+ * terminal resolves the outcome — all in one transaction, so the board and move history can never
+ * diverge (§11). Participant/turn authorization (M4.5) and the AI auto-reply (M4.3) wrap this core.
  */
 @Service
 public class GameService {
 
     private final GameRepository games;
     private final MoveRepository moves;
+    private final UserRepository users;
     private final GameRules<OthelloState, OthelloMove> rules;
     private final Search<OthelloState, OthelloMove> botSearch;
     private final GameStateMapper mapper;
@@ -34,11 +41,13 @@ public class GameService {
     public GameService(
             GameRepository games,
             MoveRepository moves,
+            UserRepository users,
             GameRules<OthelloState, OthelloMove> rules,
             Search<OthelloState, OthelloMove> botSearch,
             GameStateMapper mapper) {
         this.games = games;
         this.moves = moves;
+        this.users = users;
         this.rules = rules;
         this.botSearch = botSearch;
         this.mapper = mapper;
@@ -48,8 +57,8 @@ public class GameService {
      * Creates a {@code HUMAN_VS_AI} game for {@code userId}. The human takes the non-bot side; the
      * bot side keeps a {@code null} player id (bots have no {@code User} row, §5). The board starts at
      * the engine's initial position. When the bot plays Black it moves first, so its opening move is
-     * applied here — and recorded as the game's first {@link Move} — leaving the freshly created game
-     * already on the human's (White) turn.
+     * applied here through the shared move pipeline — recorded as move 1 — leaving the freshly created
+     * game already on the human's (White) turn.
      */
     @Transactional
     public GameStateResponse createVsAiGame(UUID userId, BotDifficulty difficulty, BotSide botSide) {
@@ -69,23 +78,98 @@ public class GameService {
         } else {
             game.setBlackPlayerId(userId);
         }
-
-        OthelloState state = rules.initialState();
-        mapper.writeState(game, state);
+        mapper.writeState(game, rules.initialState());
         game = games.save(game);
 
         if (botSide == BotSide.BLACK) {
-            // Black moves first and here Black is the bot, so play its opening move now. Recording it
-            // as move 1 keeps the stored board consistent with the replayable move list (the §5
-            // board + move-list redundancy invariant). The opening position always has legal moves.
-            OthelloMove opening = botSearch.bestMove(state);
-            OthelloState afterOpening = rules.applyMove(state, opening);
-            long flipped = state.white() & afterOpening.black(); // white discs the move turned black
-            moves.save(Move.placement(game.getId(), 1, Player.BLACK, opening.square(), flipped));
-            mapper.writeState(game, afterOpening);
-            game.setMoveCount(1);
+            // Black moves first and here Black is the bot: play its opening move through the same
+            // pipeline so it's recorded as move 1 (keeping the board consistent with the replayable
+            // move list, §5) and the game lands on the human's (White) turn.
+            applyToGame(game, botSearch.bestMove(mapper.toState(game)));
         }
 
         return GameStateResponse.from(game);
+    }
+
+    /**
+     * Applies {@code move} to game {@code gameId} (spec §9/§11). Validation of legality is delegated
+     * to the engine; an illegal placement or illegal pass throws {@link IllegalArgumentException}
+     * (M4.5 maps that to 422). Participant/turn checks are layered on in M4.5.
+     */
+    @Transactional
+    public GameStateResponse applyMove(UUID gameId, OthelloMove move) {
+        Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
+        applyToGame(game, move);
+        return GameStateResponse.from(game);
+    }
+
+    /**
+     * Core move primitive (shared by creation's opening move, human moves, and the AI reply): reads
+     * the engine state from {@code game}, applies {@code move} (the engine validates legality),
+     * persists the {@link Move} row and the new board/{@code moveCount}, and resolves the outcome if
+     * the move ended the game. Runs in the caller's transaction.
+     */
+    void applyToGame(Game game, OthelloMove move) {
+        if (game.getStatus() != GameStatus.IN_PROGRESS) {
+            // Refuse to act on an ended game: re-resolving it would double-count W/L/D. M4.5 layers
+            // the participant/turn checks ahead of this; this guard stands on its own for integrity.
+            throw new GameNotInProgressException(game.getId());
+        }
+        OthelloState before = mapper.toState(game);
+        Player mover = before.toMove();
+        OthelloState after = rules.applyMove(before, move); // throws on an illegal move/pass
+        int moveNumber = game.getMoveCount() + 1;
+
+        if (move.isPass()) {
+            moves.save(Move.pass(game.getId(), moveNumber, mover));
+        } else {
+            // Discs that changed owner: opponent discs before the move that are the mover's after it.
+            // The placed square was empty before, so it is excluded — these are exactly the flips.
+            long flipped = before.discs(mover.opponent()) & after.discs(mover);
+            moves.save(Move.placement(game.getId(), moveNumber, mover, move.square(), flipped));
+        }
+
+        mapper.writeState(game, after);
+        game.setMoveCount(moveNumber);
+
+        if (rules.isTerminal(after)) {
+            finish(game, after);
+        }
+    }
+
+    /** Resolves a terminal game: sets {@code status}/{@code winnerId} and the humans' W/L/D counters. */
+    private void finish(Game game, OthelloState terminal) {
+        Optional<Player> winner = rules.winner(terminal);
+        game.setStatus(winner.map(GameService::wonStatus).orElse(GameStatus.DRAW));
+        // winnerId is the winning *human*; null when a bot wins or it's a draw (§5, Appendix C A1).
+        game.setWinnerId(winner.map(side -> playerId(game, side)).orElse(null));
+
+        recordResult(game, Player.BLACK, winner);
+        recordResult(game, Player.WHITE, winner);
+    }
+
+    /** Updates the human on {@code side}'s denormalized counters; a no-op for the bot (null) side. */
+    private void recordResult(Game game, Player side, Optional<Player> winner) {
+        UUID userId = playerId(game, side);
+        if (userId == null) {
+            return; // bot side — no User row to update
+        }
+        User user = users.findById(userId).orElseThrow();
+        if (winner.isEmpty()) {
+            user.recordDraw();
+        } else if (winner.get() == side) {
+            user.recordWin();
+        } else {
+            user.recordLoss();
+        }
+    }
+
+    private static GameStatus wonStatus(Player winner) {
+        return winner == Player.BLACK ? GameStatus.BLACK_WON : GameStatus.WHITE_WON;
+    }
+
+    /** The player id seated on {@code side}, or {@code null} when that side is the bot. */
+    private static UUID playerId(Game game, Player side) {
+        return side == Player.BLACK ? game.getBlackPlayerId() : game.getWhitePlayerId();
     }
 }

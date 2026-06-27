@@ -103,6 +103,25 @@ public class User {
         this.eloRating = eloRating;
     }
 
+    /**
+     * Records a finished game's outcome on the denormalized counters (spec §5). Elo is updated
+     * separately (deferred to M7); these W/L/D + games-played counters are maintained here.
+     */
+    public void recordWin() {
+        gamesPlayed++;
+        wins++;
+    }
+
+    public void recordLoss() {
+        gamesPlayed++;
+        losses++;
+    }
+
+    public void recordDraw() {
+        gamesPlayed++;
+        draws++;
+    }
+
     public int getGamesPlayed() {
         return gamesPlayed;
     }

@@ -62,6 +62,14 @@ public class Game {
     @Column(name = "current_turn", nullable = false, length = 8)
     private Player currentTurn;
 
+    /**
+     * Consecutive passes leading up to {@link #currentTurn}, completing the O(1) state snapshot so
+     * double-pass termination (§6/§14) doesn't require replaying the move list. Reset to 0 by any
+     * placement; reaches 2 only in a terminal (ended) game.
+     */
+    @Column(name = "consecutive_passes", nullable = false)
+    private int consecutivePasses = 0;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
     private GameStatus status = GameStatus.IN_PROGRESS;
@@ -153,6 +161,14 @@ public class Game {
 
     public void setCurrentTurn(Player currentTurn) {
         this.currentTurn = currentTurn;
+    }
+
+    public int getConsecutivePasses() {
+        return consecutivePasses;
+    }
+
+    public void setConsecutivePasses(int consecutivePasses) {
+        this.consecutivePasses = consecutivePasses;
     }
 
     public GameStatus getStatus() {

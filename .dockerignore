@@ -1,0 +1,11 @@
+# Keep the build context small. Only .mvn/, mvnw, pom.xml and src/ are COPYed in.
+target/
+frontend/
+.git/
+.github/
+.idea/
+.claude/
+docs/
+*.md
+.env
+.env.example

@@ -6,7 +6,9 @@
 #             ("Blocking") findings. Findings are surfaced as a downloadable SARIF
 #             artifact; the GitHub Security-tab (code scanning) upload is wired but
 #             gated off by default — see the note on that step.
-# Trivy CVE scanning + the Docker image build land in later M5 tasks.
+#   trivy   — CVE gate. Scans (a) the filesystem (dependency vulns) and (b) the Docker
+#             image built here. Fails on fixable CRITICAL/HIGH (--ignore-unfixed).
+#             Same SARIF-artifact + gated-Security-tab surfacing as semgrep.
 name: CI
 
 on:
@@ -87,3 +89,84 @@ jobs:
         with:
           sarif_file: semgrep.sarif
           category: semgrep
+
+  trivy:
+    name: Trivy CVE scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # for the (toggleable) code-scanning SARIF upload
+      actions: read            # upload-sarif needs this on private repos
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # Pin the scanner binary for reproducible CLI behaviour; the vuln DB is fetched
+      # fresh at scan time regardless. These are the exact commands validated locally.
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.71.2
+
+      # (a) Filesystem scan — dependency CVEs from pom.xml + npm lockfiles. exit-code 1
+      # so a finding fails the step; continue-on-error lets the image scan + uploads
+      # still run, and the final gate step re-derives the red from the step outcome.
+      # --offline-scan: do NOT resolve transitive POMs from Maven Central (shared CI
+      # runner IPs get 429-rate-limited there, which trivy treats as FATAL). The image
+      # scan below is the authoritative Java dependency scan — it reads concrete library
+      # versions from the built fat jar — so this fs pass covers the npm lockfile and
+      # any explicitly-versioned pom deps without needing the network.
+      - name: Trivy filesystem scan (deps)
+        id: fs
+        continue-on-error: true
+        run: |
+          trivy fs --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed --offline-scan \
+            --exit-code 1 --format sarif --output trivy-fs.sarif .
+
+      - name: Build image
+        run: docker build -t othello:ci .
+
+      # (b) Image scan — OS (Alpine) + bundled-library CVEs in the runtime image.
+      - name: Trivy image scan
+        id: image
+        continue-on-error: true
+        run: |
+          trivy image --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed \
+            --exit-code 1 --format sarif --output trivy-image.sarif othello:ci
+
+      # Always-available surfacing (works on a private repo without Advanced Security).
+      - name: Upload Trivy SARIF as build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sarif
+          path: |
+            trivy-fs.sarif
+            trivy-image.sarif
+          if-no-files-found: warn
+
+      # Security-tab uploads — gated off by default (see the semgrep job note).
+      - name: Upload fs SARIF to the Security tab (requires GitHub Advanced Security)
+        if: ${{ always() && vars.ENABLE_GHAS_UPLOAD == 'true' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+      - name: Upload image SARIF to the Security tab (requires GitHub Advanced Security)
+        if: ${{ always() && vars.ENABLE_GHAS_UPLOAD == 'true' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+      # The gate: fail the job if either scan found a fixable CRITICAL/HIGH CVE.
+      # Policy: --ignore-unfixed (we gate on vulns with an upstream fix available;
+      # un-fixable ones can't be actioned and are tracked, not blocked).
+      - name: Gate on CRITICAL/HIGH
+        if: always()
+        run: |
+          echo "Trivy outcomes — fs: ${{ steps.fs.outcome }}, image: ${{ steps.image.outcome }}"
+          if [ "${{ steps.fs.outcome }}" = "failure" ] || [ "${{ steps.image.outcome }}" = "failure" ]; then
+            echo "::error::Trivy found fixable CRITICAL/HIGH CVEs — see the trivy-sarif artifact"
+            exit 1
+          fi

@@ -366,6 +366,8 @@ body {
   display: grid;
   place-items: center;
   cursor: default;
+  /* Depth for the disc-capture flip. */
+  perspective: 320px;
 }
 
 .square:not(:disabled) {
@@ -396,6 +398,64 @@ body {
 .disc-sm {
   width: 18px;
   height: 18px;
+}
+
+/* A freshly placed disc pops in. */
+.disc-pop {
+  animation: disc-pop 220ms ease-out;
+}
+
+@keyframes disc-pop {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* A captured disc flips from its old colour (front face) to its new one (back face). */
+.flipper {
+  position: relative;
+  width: 76%;
+  aspect-ratio: 1;
+  transform-style: preserve-3d;
+  animation: disc-flip 450ms ease-in-out forwards;
+}
+
+.flipper .face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flipper .face-back {
+  transform: rotateY(180deg);
+}
+
+@keyframes disc-flip {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disc-pop,
+  .flipper {
+    animation: none;
+  }
+  /* With no flip, show the final colour immediately. */
+  .flipper {
+    transform: rotateY(180deg);
+  }
 }
 
 .hint {

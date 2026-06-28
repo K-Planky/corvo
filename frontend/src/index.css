@@ -423,7 +423,9 @@ body {
   width: 76%;
   aspect-ratio: 1;
   transform-style: preserve-3d;
-  animation: disc-flip 450ms ease-in-out forwards;
+  /* `both`: during a cascade's stagger delay the disc holds its old colour (the from-state) until
+     its flip fires, then stays on the new colour. */
+  animation: disc-flip 450ms ease-in-out both;
 }
 
 .flipper .face {

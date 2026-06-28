@@ -37,6 +37,12 @@ export default function Board({
     prevRef.current = cells;
   }, [cells]);
 
+  // Squares where a disc was just placed (empty -> disc). Captures cascade outward from these.
+  const placed: number[] = [];
+  for (let i = 0; i < 64; i++) {
+    if (prev[i] === '.' && cells[i] !== '.') placed.push(i);
+  }
+
   // Standard orientation: rank 8 on top, file a on the left. Square index is row*8+col with a1=0.
   const ranks = [7, 6, 5, 4, 3, 2, 1, 0];
 
@@ -58,7 +64,7 @@ export default function Board({
                 disabled={!playable}
                 onClick={() => onPlay(square)}
               >
-                {cell !== '.' && renderDisc(square, cell, prev[square])}
+                {cell !== '.' && renderDisc(square, cell, prev[square], flipDelay(square, placed))}
                 {cell === '.' && playable && (
                   <span
                     className={`hint hint-${turn.toLowerCase()}`}
@@ -74,16 +80,40 @@ export default function Board({
   );
 }
 
+const CASCADE_STEP_MS = 70;
+
+/**
+ * Stagger a captured disc's flip by its distance from the nearest just-placed disc, so a captured
+ * line ripples outward from the move rather than flipping all at once. Discs hold their old colour
+ * until their flip fires (the animation's pre-delay state), which is what makes the sweep read.
+ */
+function flipDelay(square: number, placed: number[]): number {
+  if (placed.length === 0) return 0;
+  const r = Math.floor(square / 8);
+  const c = square % 8;
+  let nearest = Infinity;
+  for (const p of placed) {
+    const chebyshev = Math.max(Math.abs(r - Math.floor(p / 8)), Math.abs(c - (p % 8)));
+    nearest = Math.min(nearest, chebyshev);
+  }
+  return Math.max(0, nearest - 1) * CASCADE_STEP_MS;
+}
+
 /** A disc, animated by how it changed from `before`: flipped (was the other colour) or just placed. */
-function renderDisc(square: number, cell: string, before: string) {
+function renderDisc(square: number, cell: string, before: string, delayMs: number) {
   const color = cell === 'B' ? 'black' : 'white';
 
   if (before !== '.' && before !== cell) {
     // Captured: 3D flip from the old colour (front) to the new one (back). A changing key remounts
-    // the element so the flip animation replays every time this square is captured again.
+    // the element so the flip animation replays every time this square is captured again. The delay
+    // staggers the flip for the outward cascade.
     const from = before === 'B' ? 'black' : 'white';
     return (
-      <span className="flipper" key={`${square}-flip-${cell}`}>
+      <span
+        className="flipper"
+        style={{ animationDelay: `${delayMs}ms` }}
+        key={`${square}-flip-${cell}`}
+      >
         <span className={`disc face disc-${from}`} />
         <span className={`disc face face-back disc-${color}`} />
       </span>

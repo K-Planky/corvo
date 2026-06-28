@@ -119,9 +119,37 @@ public class GameService {
     @Transactional
     public GameStateResponse submitMove(UUID gameId, UUID callerId, OthelloMove move) {
         Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
+        authorizeMove(game, callerId, move);
         applyToGame(game, move);
         playBotReplyIfDue(game);
         return toResponse(game, callerId);
+    }
+
+    /**
+     * The per-game/per-turn anti-cheat (§9/§10), checked in the spec's exact order: (1) the caller is
+     * a participant (else 403); (2) the game is live and it is the caller's turn (else 409); (3) the
+     * move is in the server-computed legal-move set (else 422). The server — never the client —
+     * decides each verdict, so a forged or illegal move is rejected at the source.
+     */
+    private void authorizeMove(Game game, UUID callerId, OthelloMove move) {
+        Player side = sideOf(game, callerId);
+        if (side == null) {
+            throw new NotAGameParticipantException(game.getId());
+        }
+        if (game.getStatus() != GameStatus.IN_PROGRESS) {
+            throw new GameNotInProgressException(game.getId());
+        }
+        if (game.getCurrentTurn() != side) {
+            throw new NotYourTurnException(game.getId());
+        }
+        // (3) Legality against the server's own legal-move set. A pass is legal only when the side to
+        // move has no placement available; any other move must be one of the generated legal squares.
+        List<OthelloMove> legal = rules.getLegalMoves(mapper.toState(game));
+        boolean ok = move.isPass() ? legal.isEmpty() : legal.contains(move);
+        if (!ok) {
+            throw new IllegalMoveException(
+                    game.getId(), move.isPass() ? "illegal pass (legal moves existed)" : "square " + move.square());
+        }
     }
 
     /** Current state of {@code gameId} as seen by {@code callerId} (their legal moves included). */

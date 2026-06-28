@@ -20,6 +20,7 @@ import dev.kplanky.othello.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -120,8 +121,17 @@ public class GameService {
     public GameStateResponse submitMove(UUID gameId, UUID callerId, OthelloMove move) {
         Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
         authorizeMove(game, callerId, move);
-        applyToGame(game, move);
-        playBotReplyIfDue(game);
+        try {
+            applyToGame(game, move);
+            playBotReplyIfDue(game);
+            // Force the @Version check now, inside the transaction, so a lost optimistic-lock race
+            // surfaces here (and not as an unmapped failure at commit) where we can map it to 409.
+            games.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // Another submission committed against this game first (§11); our version is stale. The
+            // transaction rolls back — the board is left exactly as the winning move set it.
+            throw new ConcurrentMoveException(gameId, e);
+        }
         return toResponse(game, callerId);
     }
 

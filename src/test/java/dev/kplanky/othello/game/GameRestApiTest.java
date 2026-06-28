@@ -2,6 +2,8 @@ package dev.kplanky.othello.game;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.hamcrest.Matchers.hasLength;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -80,6 +82,10 @@ class GameRestApiTest {
                 .andExpect(jsonPath("$.currentTurn").value("BLACK"))
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$.blackDiscs").value(2))
+                // Render-ready board the thin client reads instead of the 64-bit bitboards: 64 chars,
+                // the opening's four centre discs set (W at 27/36, B at 28/35).
+                .andExpect(jsonPath("$.cells", hasLength(64)))
+                .andExpect(jsonPath("$.cells").value(matchesPattern("\\.{27}WB\\.{6}BW\\.{27}")))
                 .andExpect(jsonPath("$.legalMoves.length()").value(4))
                 .andReturn()
                 .getResponse()

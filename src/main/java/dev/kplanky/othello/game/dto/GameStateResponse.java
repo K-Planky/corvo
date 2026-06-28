@@ -18,6 +18,13 @@ import java.util.UUID;
  * participant, or when the game has ended. An empty list <em>on the caller's turn</em> (status
  * {@code IN_PROGRESS}, {@code currentTurn} == the caller's side) means they have no placement and
  * must pass — that is how the client decides to surface a Pass action.
+ *
+ * <p>{@code cells} is a render-ready view of the board: 64 chars indexed {@code row * 8 + col}
+ * (matching {@code Move.position} and {@code legalMoves}), each {@code 'B'} / {@code 'W'} / {@code
+ * '.'}. The raw {@code boardBlack}/{@code boardWhite} bitboards are kept for completeness, but a
+ * full board sets bits past 2^53 (any disc on rank 8), so they can't be read losslessly as JSON
+ * numbers in JavaScript — the client renders from {@code cells} instead and never touches the
+ * bitboards.
  */
 public record GameStateResponse(
         UUID id,
@@ -28,6 +35,7 @@ public record GameStateResponse(
         BotDifficulty botDifficulty,
         long boardBlack,
         long boardWhite,
+        String cells,
         Player currentTurn,
         GameStatus status,
         UUID winnerId,
@@ -46,6 +54,7 @@ public record GameStateResponse(
                 game.getBotDifficulty(),
                 game.getBoardBlack(),
                 game.getBoardWhite(),
+                renderCells(game.getBoardBlack(), game.getBoardWhite()),
                 game.getCurrentTurn(),
                 game.getStatus(),
                 game.getWinnerId(),
@@ -53,5 +62,15 @@ public record GameStateResponse(
                 Long.bitCount(game.getBoardBlack()),
                 Long.bitCount(game.getBoardWhite()),
                 List.copyOf(legalMoves));
+    }
+
+    /** Flattens the two bitboards into a 64-char {@code B}/{@code W}/{@code .} string, index = square. */
+    private static String renderCells(long black, long white) {
+        char[] cells = new char[64];
+        for (int square = 0; square < 64; square++) {
+            long mask = 1L << square;
+            cells[square] = (black & mask) != 0 ? 'B' : (white & mask) != 0 ? 'W' : '.';
+        }
+        return new String(cells);
     }
 }

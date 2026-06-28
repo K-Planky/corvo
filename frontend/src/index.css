@@ -63,7 +63,6 @@ body {
   margin: 0 auto 0.6rem;
   width: 72px;
   height: 72px;
-  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
 }
 
 .brand {

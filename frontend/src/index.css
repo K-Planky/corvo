@@ -1,3 +1,9 @@
+html {
+  /* Always reserve the scrollbar gutter so a scrollbar toggling between screens/states never nudges
+     the centered layout sideways. */
+  scrollbar-gutter: stable;
+}
+
 :root {
   --bg: #0f1419;
   --panel: #1b232d;
@@ -375,6 +381,13 @@ body {
   width: 15px;
   height: 15px;
   flex: none;
+}
+
+/* Fixed width (fits the longest label, "Bot is thinking…") so the centered strip never reflows as
+   the turn text changes — that width change was the per-turn "bounce". */
+.banner-text {
+  min-width: 9.5em;
+  text-align: center;
 }
 
 .banner-win {

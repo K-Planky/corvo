@@ -126,18 +126,15 @@ function Banner({
   if (isOver(game)) {
     return <p className={`banner banner-result ${resultClass(game, you)}`}>{resultText(game, you)}</p>;
   }
-  // In-progress: a slim status strip with a swatch of the side to move.
-  const swatch = <span className={`turn-dot disc disc-${game.currentTurn.toLowerCase()}`} />;
-  if (busy) {
-    return (
-      <p className="banner">
-        {swatch} Bot is thinking…
-      </p>
-    );
-  }
+  // In-progress: a slim status strip with a swatch of the side to move. While the bot is thinking the
+  // persisted turn is still yours (the move is mid-flight), so derive the bot's side explicitly. The
+  // label sits in a fixed-width box so the centered strip doesn't shift as the text length changes.
+  const turnSide: Player = busy ? (you === 'BLACK' ? 'WHITE' : 'BLACK') : game.currentTurn;
+  const label = busy ? 'Bot is thinking…' : game.currentTurn === you ? 'Your move' : "Bot's move";
   return (
     <p className="banner">
-      {swatch} {game.currentTurn === you ? 'Your move' : "Bot's move"}
+      <span className={`turn-dot disc disc-${turnSide.toLowerCase()}`} />
+      <span className="banner-text">{label}</span>
     </p>
   );
 }

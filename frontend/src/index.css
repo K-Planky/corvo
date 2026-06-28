@@ -448,13 +448,24 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .disc-pop,
+  /* Honor the preference: drop the spin/pop (motion), but keep a motion-free crossfade so a
+     placement or capture is still visibly acknowledged rather than snapping instantly. */
   .flipper {
     animation: none;
-  }
-  /* With no flip, show the final colour immediately. */
-  .flipper {
     transform: rotateY(180deg);
+  }
+  .disc-pop,
+  .flipper .face-back {
+    animation: disc-fade 260ms ease-out;
+  }
+}
+
+@keyframes disc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

@@ -251,17 +251,14 @@ body {
   font-size: 0.9rem;
   cursor: pointer;
   user-select: none;
-  /* Snappy: quick easing + a press scale for tactile feedback. */
-  transition: background 0.1s ease, border-color 0.1s ease, transform 0.06s ease;
+  /* Snappy: fast colour change, no transform (no press bounce). */
+  transition: background 0.08s ease, border-color 0.08s ease;
 }
 
-.chip:hover {
+/* Hover only the unselected pills, so it never overrides the selected (teal) state. */
+.chip:not(.chip-on):hover {
   border-color: #4a5b6e;
   background: #2b3947;
-}
-
-.chip:active {
-  transform: scale(0.94);
 }
 
 .chip-on {

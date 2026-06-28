@@ -38,7 +38,8 @@ export default function Auth({ onAuthenticated }: AuthProps) {
 
   return (
     <section className="card auth">
-      <h1 className="logo">Othello</h1>
+      <img className="logo-mark" src="/favicon.svg" alt="" width="72" height="72" />
+      <h1 className="logo">Corvo</h1>
       <p className="tagline">Play Reversi against the bot.</p>
 
       <form onSubmit={submit}>

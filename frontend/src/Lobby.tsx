@@ -50,7 +50,10 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
   return (
     <section className="lobby">
       <header className="topbar">
-        <h1 className="logo logo-sm">Othello</h1>
+        <span className="brand">
+          <img className="logo-mark-sm" src="/favicon.svg" alt="" width="26" height="26" />
+          <h1 className="logo logo-sm">Corvo</h1>
+        </span>
         <span className="who">
           {user.username} · {user.eloRating}
           <button type="button" className="link" onClick={onLogout}>

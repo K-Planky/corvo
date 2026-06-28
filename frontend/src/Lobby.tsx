@@ -51,7 +51,7 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
     <section className="lobby">
       <header className="topbar">
         <span className="brand">
-          <img className="logo-mark-sm" src="/favicon.svg" alt="" width="26" height="26" />
+          <img className="logo-mark-sm" src="/crow.svg" alt="" width="38" height="38" />
           <h1 className="logo logo-sm">Corvo</h1>
         </span>
         <span className="who">

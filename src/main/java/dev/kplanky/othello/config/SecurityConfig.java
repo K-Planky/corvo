@@ -1,6 +1,7 @@
 package dev.kplanky.othello.config;
 
 import dev.kplanky.othello.auth.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,7 +37,15 @@ public class SecurityConfig {
             throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/health", "/api/auth/**")
+                .authorizeHttpRequests(auth -> auth
+                        // Let the container's internal ERROR dispatch through. A @ResponseStatus
+                        // exception (403/409/422 from the move anti-cheat) forwards to /error; because
+                        // the session is STATELESS and the JWT filter is once-per-request (it skips
+                        // error dispatches), that re-dispatch is unauthenticated and would otherwise be
+                        // overwritten with 401 by the entry point — masking the real status.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR)
+                        .permitAll()
+                        .requestMatchers("/health", "/api/auth/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated())

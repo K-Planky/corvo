@@ -349,6 +349,9 @@ body {
 .board {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
+  /* Constrain rows too, else empty rows collapse and disc rows grow — the board's cells must stay a
+     fixed 8x8 of equal squares regardless of what's placed. */
+  grid-template-rows: repeat(8, 1fr);
   gap: 2px;
   background: var(--felt-line);
   aspect-ratio: 1;

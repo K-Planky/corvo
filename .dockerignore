@@ -1,6 +1,8 @@
-# Keep the build context small. Only .mvn/, mvnw, pom.xml and src/ are COPYed in.
+# Keep the build context small. The image build COPYs .mvn/, mvnw, pom.xml, src/ and the
+# frontend source (built by the web stage); node_modules + a prior dist are rebuilt in-image.
 target/
-frontend/
+frontend/node_modules/
+frontend/dist/
 .git/
 .github/
 .idea/
@@ -9,3 +11,4 @@ docs/
 *.md
 .env
 .env.example
+.env.prod

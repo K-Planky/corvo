@@ -5,6 +5,7 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -46,6 +47,13 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR)
                         .permitAll()
                         .requestMatchers("/health", "/api/auth/**")
+                        .permitAll()
+                        // SPA shell + assets are served same-origin by this app (spec §13) and must
+                        // load before authentication; the API stays protected by anyRequest() below.
+                        // No client-side router, so only the root, index.html, Vite's /assets/** and
+                        // a few root icons are served — not a catch-all.
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**",
+                                "/*.svg", "/*.png", "/*.ico", "/*.webmanifest")
                         .permitAll()
                         .anyRequest()
                         .authenticated())

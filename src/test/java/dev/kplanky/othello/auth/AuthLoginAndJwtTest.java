@@ -58,7 +58,9 @@ class AuthLoginAndJwtTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"dave\",\"password\":\"wrong\"}"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                // Generic, account-non-enumerating reason, surfaced in the body for the client.
+                .andExpect(jsonPath("$.message").value("invalid username or password"));
     }
 
     @Test
@@ -66,7 +68,9 @@ class AuthLoginAndJwtTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"nobody\",\"password\":\"correcthorse\"}"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                // Identical reason as the wrong-password case so the response can't enumerate users.
+                .andExpect(jsonPath("$.message").value("invalid username or password"));
     }
 
     @Test

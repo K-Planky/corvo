@@ -79,7 +79,10 @@ class AuthRegistrationTest {
                                 """
                                 {"username":"bob","email":"other@example.com","password":"password1"}
                                 """))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                // The reason is surfaced in the body so the client shows it (not a generic
+                // status-based default written for a different context).
+                .andExpect(jsonPath("$.message").value("username already taken"));
 
         assertThat(users.count()).isEqualTo(1);
     }
@@ -95,7 +98,8 @@ class AuthRegistrationTest {
                                 """
                                 {"username":"carol2","email":"carol@example.com","password":"password1"}
                                 """))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("email already registered"));
 
         assertThat(users.count()).isEqualTo(1);
     }

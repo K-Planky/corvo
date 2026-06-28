@@ -124,14 +124,20 @@ function Banner({
   busy: boolean;
 }) {
   if (isOver(game)) {
-    return <p className={`banner ${resultClass(game, you)}`}>{resultText(game, you)}</p>;
+    return <p className={`banner banner-result ${resultClass(game, you)}`}>{resultText(game, you)}</p>;
   }
+  // In-progress: a slim status strip with a swatch of the side to move.
+  const swatch = <span className={`turn-dot disc disc-${game.currentTurn.toLowerCase()}`} />;
   if (busy) {
-    return <p className="banner">Bot is thinking…</p>;
+    return (
+      <p className="banner">
+        {swatch} Bot is thinking…
+      </p>
+    );
   }
   return (
     <p className="banner">
-      {game.currentTurn === you ? 'Your move' : "Bot's move"}
+      {swatch} {game.currentTurn === you ? 'Your move' : "Bot's move"}
     </p>
   );
 }

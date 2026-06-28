@@ -55,7 +55,8 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
           <h1 className="logo logo-sm">Corvo</h1>
         </span>
         <span className="who">
-          {user.username} · {user.eloRating}
+          {user.username}
+          <span className="rating">{user.eloRating} Elo</span>
           <button type="button" className="link" onClick={onLogout}>
             Sign out
           </button>

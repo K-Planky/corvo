@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kplanky.othello.TestcontainersConfiguration;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,9 @@ class GameRestApiTest {
     MoveRepository moves;
 
     @Autowired
+    RatingHistoryRepository ratings;
+
+    @Autowired
     UserRepository users;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -52,6 +56,7 @@ class GameRestApiTest {
     @BeforeEach
     void setUp() throws Exception {
         moves.deleteAll();
+        ratings.deleteAll();
         games.deleteAll();
         users.deleteAll();
         JsonNode auth = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")

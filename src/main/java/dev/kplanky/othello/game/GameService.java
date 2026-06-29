@@ -6,6 +6,7 @@ import dev.kplanky.othello.domain.Game;
 import dev.kplanky.othello.domain.GameStatus;
 import dev.kplanky.othello.domain.Move;
 import dev.kplanky.othello.domain.OpponentType;
+import dev.kplanky.othello.domain.RatingHistory;
 import dev.kplanky.othello.domain.User;
 import dev.kplanky.othello.engine.GameRules;
 import dev.kplanky.othello.engine.Player;
@@ -13,8 +14,10 @@ import dev.kplanky.othello.engine.othello.OthelloMove;
 import dev.kplanky.othello.engine.othello.OthelloState;
 import dev.kplanky.othello.game.dto.GameStateResponse;
 import dev.kplanky.othello.game.dto.MoveResponse;
+import dev.kplanky.othello.rating.Elo;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +39,7 @@ public class GameService {
     private final GameRepository games;
     private final MoveRepository moves;
     private final UserRepository users;
+    private final RatingHistoryRepository ratings;
     private final GameRules<OthelloState, OthelloMove> rules;
     private final BotEngine botEngine;
     private final GameStateMapper mapper;
@@ -44,12 +48,14 @@ public class GameService {
             GameRepository games,
             MoveRepository moves,
             UserRepository users,
+            RatingHistoryRepository ratings,
             GameRules<OthelloState, OthelloMove> rules,
             BotEngine botEngine,
             GameStateMapper mapper) {
         this.games = games;
         this.moves = moves;
         this.users = users;
+        this.ratings = ratings;
         this.rules = rules;
         this.botEngine = botEngine;
         this.mapper = mapper;
@@ -258,20 +264,55 @@ public class GameService {
         recordResult(game, Player.WHITE, winner);
     }
 
-    /** Updates the human on {@code side}'s denormalized counters; a no-op for the bot (null) side. */
+    /**
+     * Updates the human on {@code side}: their denormalized W/L/D counters <em>and</em> their Elo
+     * rating (spec §5/§8). A no-op for the bot (null) side — the bot has no {@code User} row and its
+     * rating is fixed (only the human's rating moves in a vs-AI game, §8).
+     */
     private void recordResult(Game game, Player side, Optional<Player> winner) {
         UUID userId = playerId(game, side);
         if (userId == null) {
             return; // bot side — no User row to update
         }
         User user = users.findById(userId).orElseThrow();
+        double score;
         if (winner.isEmpty()) {
             user.recordDraw();
+            score = Elo.DRAW;
         } else if (winner.get() == side) {
             user.recordWin();
+            score = Elo.WIN;
         } else {
             user.recordLoss();
+            score = Elo.LOSS;
         }
+        updateRating(game, side, user, score);
+    }
+
+    /**
+     * Applies the Elo change for {@code user} (seated on {@code side}) from this terminal game and
+     * records it in {@link RatingHistory} for the stats/graph endpoint (spec §8/§9). The opponent's
+     * rating is the bot's fixed rating in a vs-AI game; only the human's rating moves.
+     */
+    private void updateRating(Game game, Player side, User user, double score) {
+        int oldRating = user.getEloRating();
+        int newRating = Elo.updatedRating(oldRating, opponentRatingFor(game, side), score);
+        user.setEloRating(newRating);
+        ratings.save(new RatingHistory(user.getId(), game.getId(), oldRating, newRating));
+    }
+
+    /**
+     * The rating the player on {@code side} is scored against. In a vs-AI game the opponent is the
+     * bot, whose fixed rating was captured on the game at creation (§8). The human-opponent branch is
+     * for PvP (M9), which must snapshot both ratings before updating either so the symmetric update
+     * is order-independent — today only vs-AI reaches here.
+     */
+    private int opponentRatingFor(Game game, Player side) {
+        UUID opponentId = playerId(game, side.opponent());
+        if (opponentId != null) {
+            return users.findById(opponentId).orElseThrow().getEloRating();
+        }
+        return game.getBotRating();
     }
 
     private static GameStatus wonStatus(Player winner) {

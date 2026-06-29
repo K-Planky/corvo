@@ -17,6 +17,7 @@ import dev.kplanky.othello.engine.othello.OthelloState;
 import dev.kplanky.othello.game.dto.GameStateResponse;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +47,9 @@ class GameMoveServiceTest {
     MoveRepository moves;
 
     @Autowired
+    RatingHistoryRepository ratings;
+
+    @Autowired
     UserRepository users;
 
     @Autowired
@@ -59,6 +63,7 @@ class GameMoveServiceTest {
     @BeforeEach
     void setUp() {
         moves.deleteAll();
+        ratings.deleteAll();
         games.deleteAll();
         users.deleteAll();
         humanId = users.save(new User("human", "human@example.com", "hash")).getId();

@@ -13,6 +13,7 @@ import dev.kplanky.othello.engine.Player;
 import dev.kplanky.othello.engine.othello.OthelloState;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,9 @@ class GameMoveAuthorizationTest {
     MoveRepository moves;
 
     @Autowired
+    RatingHistoryRepository ratings;
+
+    @Autowired
     UserRepository users;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -59,6 +63,7 @@ class GameMoveAuthorizationTest {
     @BeforeEach
     void setUp() throws Exception {
         moves.deleteAll();
+        ratings.deleteAll();
         games.deleteAll();
         users.deleteAll();
         ownerToken = register("owner");

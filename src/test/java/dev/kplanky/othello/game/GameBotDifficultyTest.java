@@ -8,6 +8,7 @@ import dev.kplanky.othello.domain.BotSide;
 import dev.kplanky.othello.domain.Game;
 import dev.kplanky.othello.domain.User;
 import dev.kplanky.othello.repository.GameRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,12 +32,16 @@ class GameBotDifficultyTest {
     GameRepository games;
 
     @Autowired
+    RatingHistoryRepository ratings;
+
+    @Autowired
     UserRepository users;
 
     private UUID humanId;
 
     @BeforeEach
     void setUp() {
+        ratings.deleteAll();
         games.deleteAll();
         users.deleteAll();
         humanId = users.save(new User("human", "human@example.com", "hash")).getId();

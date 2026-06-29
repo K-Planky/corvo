@@ -15,6 +15,7 @@ import dev.kplanky.othello.engine.Player;
 import dev.kplanky.othello.engine.othello.OthelloState;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import java.util.List;
 import java.util.UUID;
@@ -48,6 +49,9 @@ class GameCreationTest {
     MoveRepository moves;
 
     @Autowired
+    RatingHistoryRepository ratings;
+
+    @Autowired
     UserRepository users;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -59,6 +63,7 @@ class GameCreationTest {
     void setUp() throws Exception {
         // Clear in FK order (moves → games → users): no ON DELETE CASCADE in the schema.
         moves.deleteAll();
+        ratings.deleteAll();
         games.deleteAll();
         users.deleteAll();
         JsonNode auth = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")

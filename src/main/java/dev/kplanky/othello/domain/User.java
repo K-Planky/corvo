@@ -105,7 +105,8 @@ public class User {
 
     /**
      * Records a finished game's outcome on the denormalized counters (spec §5). Elo is updated
-     * separately (deferred to M7); these W/L/D + games-played counters are maintained here.
+     * separately (see {@code GameService}'s rating update, §8); these W/L/D + games-played counters
+     * are maintained here.
      */
     public void recordWin() {
         gamesPlayed++;

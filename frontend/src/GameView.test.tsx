@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import GameView from './GameView';
+import GameView, { STAGE_MS } from './GameView';
 import type { GameState } from './types';
 import type { GameEvent } from './ws';
 
@@ -99,7 +99,7 @@ describe('GameView', () => {
     expect(screen.getByText('Your move')).toBeInTheDocument();
   });
 
-  it('submits a move, shows the bot thinking, then re-renders from the bot reply push', async () => {
+  it('submits a move, shows the bot thinking, then re-renders from the staged bot reply push', async () => {
     vi.mocked(submitMove).mockResolvedValue(AFTER_HUMAN_D3);
     render(<GameView initial={OPENING} onExit={() => {}} />);
 
@@ -111,9 +111,15 @@ describe('GameView', () => {
     await waitFor(() => expect(screen.getByText('Bot is thinking…')).toBeInTheDocument());
     expect(screen.getByText('4')).toBeInTheDocument();
 
-    // The bot's reply arrives over the socket; the client re-renders from the push.
+    // The bot's reply arrives over the socket immediately after the human move, but is staged behind
+    // its animation window — synchronously after the push the board must NOT have jumped to it yet.
     act(() => pushEvent({ type: 'MOVE_MADE', state: AFTER_BOT_REPLY }));
-    await waitFor(() => expect(screen.getByText('Your move')).toBeInTheDocument());
+    expect(screen.queryByText('Your move')).not.toBeInTheDocument();
+
+    // Once the stage window (STAGE_MS) elapses, the client re-renders from the push.
+    await waitFor(() => expect(screen.getByText('Your move')).toBeInTheDocument(), {
+      timeout: STAGE_MS + 1000,
+    });
     // Both scores now read 3 (the pushed state), proving the board came from the push, not the POST.
     expect(screen.getAllByText('3')).toHaveLength(2);
   });

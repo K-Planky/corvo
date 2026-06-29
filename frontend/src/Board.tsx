@@ -4,8 +4,9 @@
 //
 // Discs animate on change: a freshly placed disc pops in, and a captured disc does a 3D flip from
 // its old colour to its new one. We detect what changed by diffing the previous `cells` against the
-// current one (kept in a ref). In the M4 slice the human move and the synchronous bot reply arrive
-// in one state update, so everything animates together; M8's WebSocket split will let us stage them.
+// current one (kept in a ref). Each animation needs a painted frame plus its duration to be seen, so
+// GameView staggers the human move and the bot's WebSocket reply (STAGE_MS) rather than letting a
+// fast reply overwrite the human-move frame before it animates — see GameView's showState.
 
 import { useEffect, useRef } from 'react';
 import type { Player } from './types';

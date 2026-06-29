@@ -48,8 +48,16 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
     static long legalMoveMask(OthelloState state) {
         long mine = state.discs(state.toMove());
         long theirs = state.discs(state.toMove().opponent());
-        long empty = ~state.occupied();
+        return legalMoveMask(mine, theirs, ~state.occupied());
+    }
 
+    /**
+     * Bitboard of legal placements for a side holding {@code mine} against {@code theirs} with
+     * {@code empty} squares vacant — the perspective-free core of {@link #legalMoveMask(OthelloState)}.
+     * Exposed so the evaluator can measure either side's mobility (spec §7) without reconstructing a
+     * state just to flip the side to move, and without duplicating the eight-direction walk.
+     */
+    static long legalMoveMask(long mine, long theirs, long empty) {
         long moves = 0L;
         for (LongUnaryOperator shift : Bitboards.DIRECTIONS) {
             // Opponent discs directly adjacent to one of ours, then extend along the run.

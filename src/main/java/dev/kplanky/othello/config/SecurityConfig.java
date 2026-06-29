@@ -20,9 +20,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * token-based, not cookie-based. BCrypt hashes passwords.
  *
  * <p>The public surface is {@code /health}, {@code /api/auth/**} (register + login), and the
- * read-only {@code GET /api/leaderboard} (§9, auth optional); every other request must carry a valid
- * JWT, verified by the {@link JwtAuthenticationFilter} which runs before the username/password filter
- * and populates the security context.
+ * read-only {@code GET /api/leaderboard} and {@code GET /api/users/{id}/stats} (§9, auth optional);
+ * every other request must carry a valid JWT, verified by the {@link JwtAuthenticationFilter} which
+ * runs before the username/password filter and populates the security context.
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -49,8 +49,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/health", "/api/auth/**")
                         .permitAll()
-                        // The leaderboard is public (spec §9, auth optional) — readable without a JWT.
-                        .requestMatchers(HttpMethod.GET, "/api/leaderboard")
+                        // Public reads (spec §9, auth optional) — the leaderboard and a user's stats.
+                        .requestMatchers(HttpMethod.GET, "/api/leaderboard", "/api/users/*/stats")
                         .permitAll()
                         // SPA shell + assets are served same-origin by this app (spec §13) and must
                         // load before authentication; the API stays protected by anyRequest() below.

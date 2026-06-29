@@ -11,6 +11,8 @@ export default defineConfig({
     proxy: {
       '/health': 'http://localhost:8080',
       '/api': 'http://localhost:8080',
+      // STOMP/WebSocket endpoint (M8); `ws: true` upgrades the connection through the dev proxy.
+      '/ws': { target: 'http://localhost:8080', ws: true },
     },
   },
   test: {

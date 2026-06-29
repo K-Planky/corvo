@@ -31,4 +31,14 @@ public class GameEventPublisher {
     public void gameOver(UUID gameId, GameStateResponse state) {
         broker.convertAndSend(GAME_TOPIC + gameId, GameEvent.gameOver(state));
     }
+
+    /**
+     * A convenience nudge to {@code userId} that it is now their turn (spec §9), delivered on their
+     * personal queue {@code /user/queue/notifications}. {@code state} is the same view as the topic
+     * push, so the recipient can render from it directly. (Most useful for PvP — M9; in vs-AI the
+     * topic's {@code MOVE_MADE} already conveys the turn flip.)
+     */
+    public void yourTurn(UUID userId, GameStateResponse state) {
+        broker.convertAndSendToUser(userId.toString(), "/queue/notifications", GameEvent.yourTurn(state));
+    }
 }

@@ -106,7 +106,7 @@ class GameAsyncAiReplyTest {
         JsonNode created = post("/api/games", token, "{\"difficulty\":\"HARD\",\"botSide\":\"WHITE\"}");
         UUID gameId = UUID.fromString(created.get("id").asText());
 
-        BlockingQueue<Map<String, Object>> events = subscribe(gameId);
+        Subscriptions subs = subscribe(gameId);
         int firstLegal = rules.getLegalMoves(OthelloState.initial()).get(0).square();
 
         // The POST returns the state after only the HUMAN's move — it did not wait for the Hard search.
@@ -115,7 +115,7 @@ class GameAsyncAiReplyTest {
         assertThat(response.get("currentTurn").asText()).isEqualTo("WHITE"); // the bot's turn now
 
         // The bot's reply is pushed over WebSocket shortly after, advancing the game to move 2.
-        Map<String, Object> event = events.poll(10, TimeUnit.SECONDS);
+        Map<String, Object> event = subs.topic().poll(10, TimeUnit.SECONDS);
         assertThat(event).isNotNull();
         assertThat(event.get("type")).isEqualTo("MOVE_MADE");
         @SuppressWarnings("unchecked")
@@ -123,6 +123,11 @@ class GameAsyncAiReplyTest {
         assertThat(((Number) state.get("moveCount")).intValue()).isEqualTo(2);
         assertThat(state.get("currentTurn")).isEqualTo("BLACK"); // back to the human
         assertThat(state.get("status")).isEqualTo("IN_PROGRESS");
+
+        // The personal queue gets a YOUR_TURN nudge now that the turn is back to the human.
+        Map<String, Object> nudge = subs.personal().poll(5, TimeUnit.SECONDS);
+        assertThat(nudge).isNotNull();
+        assertThat(nudge.get("type")).isEqualTo("YOUR_TURN");
     }
 
     @Test
@@ -145,28 +150,42 @@ class GameAsyncAiReplyTest {
         // Sanity: the human really has no placement, so a pass is their only (forced) move.
         assertThat(rules.getLegalMoves(mapper.toState(crafted))).isEmpty();
 
-        BlockingQueue<Map<String, Object>> events = subscribe(gameId);
+        Subscriptions subs = subscribe(gameId);
 
         JsonNode response = post("/api/games/" + gameId + "/moves", token, "{\"pass\":true}");
         assertThat(response.get("status").asText()).isNotEqualTo("IN_PROGRESS"); // already terminal
 
         // GAME_OVER is pushed; no MOVE_MADE bot reply is ever scheduled.
-        Map<String, Object> first = events.poll(10, TimeUnit.SECONDS);
+        Map<String, Object> first = subs.topic().poll(10, TimeUnit.SECONDS);
         assertThat(first).isNotNull();
         assertThat(first.get("type")).isEqualTo("GAME_OVER");
-        // Drain briefly to prove the bot never replied.
-        assertThat(events.poll(1, TimeUnit.SECONDS)).isNull();
+        // Drain briefly to prove the bot never replied (no MOVE_MADE / YOUR_TURN follow).
+        assertThat(subs.topic().poll(1, TimeUnit.SECONDS)).isNull();
+        assertThat(subs.personal().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
-    private BlockingQueue<Map<String, Object>> subscribe(UUID gameId) throws Exception {
+    /** The two destinations a participant listens on: the per-game topic and their personal queue. */
+    private record Subscriptions(
+            BlockingQueue<Map<String, Object>> topic, BlockingQueue<Map<String, Object>> personal) {}
+
+    private Subscriptions subscribe(UUID gameId) throws Exception {
         StompHeaders headers = new StompHeaders();
         headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         StompSession session = stompClient
                 .connectAsync(url(), new WebSocketHttpHeaders(), headers, new StompSessionHandlerAdapter() {})
                 .get(5, TimeUnit.SECONDS);
 
-        BlockingQueue<Map<String, Object>> received = new LinkedBlockingQueue<>();
-        session.subscribe("/topic/games/" + gameId, new StompFrameHandler() {
+        BlockingQueue<Map<String, Object>> topic = new LinkedBlockingQueue<>();
+        BlockingQueue<Map<String, Object>> personal = new LinkedBlockingQueue<>();
+        session.subscribe("/topic/games/" + gameId, mapHandler(topic));
+        session.subscribe("/user/queue/notifications", mapHandler(personal));
+        // Let the SUBSCRIBEs register before the move that triggers the pushes.
+        Thread.sleep(300);
+        return new Subscriptions(topic, personal);
+    }
+
+    private static StompFrameHandler mapHandler(BlockingQueue<Map<String, Object>> sink) {
+        return new StompFrameHandler() {
             @Override
             public Type getPayloadType(StompHeaders headers) {
                 return Map.class;
@@ -175,12 +194,9 @@ class GameAsyncAiReplyTest {
             @SuppressWarnings("unchecked")
             @Override
             public void handleFrame(StompHeaders headers, Object payload) {
-                received.add((Map<String, Object>) payload);
+                sink.add((Map<String, Object>) payload);
             }
-        });
-        // Let the SUBSCRIBE register before the move that triggers the push.
-        Thread.sleep(300);
-        return received;
+        };
     }
 
     private JsonNode post(String path, String bearer, String body) {

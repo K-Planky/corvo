@@ -68,6 +68,9 @@ public class AiReplyService {
                     publisher.moveMade(gameId, after);
                     if (after.status() != GameStatus.IN_PROGRESS) {
                         publisher.gameOver(gameId, after);
+                    } else {
+                        // The bot moved and the turn is back to the human — nudge their personal queue.
+                        publisher.yourTurn(humanId, after);
                     }
                 });
             }

@@ -1,10 +1,12 @@
 // One vs-AI game: the board plus score, turn/status banner, and the Pass action that appears only
-// when the server reports the human has no legal placement. State advances by replacing the whole
-// GameState with each move response — the synchronous M4 reply already includes the bot's move.
+// when the server reports the human has no legal placement. The move POST returns the state after the
+// human's move only; the bot's reply is computed off-thread and pushed over WebSocket (M8), so we
+// subscribe to the game's events and replace the whole GameState from each push.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Board from './Board';
 import { ApiError, submitMove } from './api';
+import { subscribeToGame } from './ws';
 import { humanSide, isOver, type GameState, type Player } from './types';
 
 interface GameViewProps {
@@ -21,12 +23,22 @@ export default function GameView({ initial, onExit }: GameViewProps) {
   const over = isOver(game);
   const yourTurn = !over && game.currentTurn === you;
   const mustPass = yourTurn && game.legalMoves.length === 0;
+  // It's the bot's turn and not over ⇒ the server is computing the reply it will push to us.
+  const botThinking = !over && !yourTurn;
+
+  // Re-render live from server pushes: the bot's reply (MOVE_MADE) and the terminal result
+  // (GAME_OVER) arrive here rather than in the move POST's response. Re-subscribe per game id.
+  useEffect(() => {
+    const sub = subscribeToGame(initial.id, (event) => setGame(event.state));
+    return () => sub.close();
+  }, [initial.id]);
 
   async function play(move: { position: number } | { pass: true }) {
     if (busy) return;
     setBusy(true);
     setError(null);
     try {
+      // The response reflects only our move; the bot's reply follows over the socket.
       setGame(await submitMove(game.id, move));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong.');
@@ -61,7 +73,7 @@ export default function GameView({ initial, onExit }: GameViewProps) {
         />
       </div>
 
-      <Banner game={game} you={you} busy={busy} />
+      <Banner game={game} you={you} botThinking={botThinking} />
 
       <Board
         cells={game.cells}
@@ -117,23 +129,22 @@ function Score({
 function Banner({
   game,
   you,
-  busy,
+  botThinking,
 }: {
   game: GameState;
   you: Player;
-  busy: boolean;
+  botThinking: boolean;
 }) {
   if (isOver(game)) {
     return <p className={`banner banner-result ${resultClass(game, you)}`}>{resultText(game, you)}</p>;
   }
-  // In-progress: a slim status strip with a swatch of the side to move. While the bot is thinking the
-  // persisted turn is still yours (the move is mid-flight), so derive the bot's side explicitly. The
-  // label sits in a fixed-width box so the centered strip doesn't shift as the text length changes.
-  const turnSide: Player = busy ? (you === 'BLACK' ? 'WHITE' : 'BLACK') : game.currentTurn;
-  const label = busy ? 'Bot is thinking…' : game.currentTurn === you ? 'Your move' : "Bot's move";
+  // In-progress: a slim status strip with a swatch of the side to move. When it's the bot's turn it is
+  // computing the reply it will push back, so the label reads "Bot is thinking…". The label sits in a
+  // fixed-width box so the centered strip doesn't shift as the text length changes.
+  const label = botThinking ? 'Bot is thinking…' : 'Your move';
   return (
     <p className="banner">
-      <span className={`turn-dot disc disc-${turnSide.toLowerCase()}`} />
+      <span className={`turn-dot disc disc-${game.currentTurn.toLowerCase()}`} />
       <span className="banner-text">{label}</span>
     </p>
   );

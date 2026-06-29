@@ -136,8 +136,8 @@ export function listGames(status?: string): Promise<GameState[]> {
   return request<GameState[]>(`/games${query}`);
 }
 
-/** Submit a placement (`position`) or a pass. Returns the post-move state — for vs-AI in M4 that
- *  already includes the bot's synchronous reply (M8 will move it to a WebSocket push). */
+/** Submit a placement (`position`) or a pass. Returns the state after the human's move only; the
+ *  bot's reply is computed off-thread and arrives over the WebSocket as a MOVE_MADE push (see ws.ts). */
 export function submitMove(
   id: string,
   move: { position: number } | { pass: true },

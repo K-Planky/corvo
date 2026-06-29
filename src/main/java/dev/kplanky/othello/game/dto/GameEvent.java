@@ -10,6 +10,7 @@ public record GameEvent(String type, GameStateResponse state) {
 
     public static final String MOVE_MADE = "MOVE_MADE";
     public static final String GAME_OVER = "GAME_OVER";
+    public static final String YOUR_TURN = "YOUR_TURN";
 
     public static GameEvent moveMade(GameStateResponse state) {
         return new GameEvent(MOVE_MADE, state);
@@ -17,5 +18,9 @@ public record GameEvent(String type, GameStateResponse state) {
 
     public static GameEvent gameOver(GameStateResponse state) {
         return new GameEvent(GAME_OVER, state);
+    }
+
+    public static GameEvent yourTurn(GameStateResponse state) {
+        return new GameEvent(YOUR_TURN, state);
     }
 }

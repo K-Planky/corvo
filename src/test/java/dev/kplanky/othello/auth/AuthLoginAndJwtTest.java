@@ -8,6 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kplanky.othello.TestcontainersConfiguration;
+import dev.kplanky.othello.repository.GameRepository;
+import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,10 +38,25 @@ class AuthLoginAndJwtTest {
     @Autowired
     UserRepository users;
 
+    @Autowired
+    GameRepository games;
+
+    @Autowired
+    MoveRepository moves;
+
+    @Autowired
+    RatingHistoryRepository ratings;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void clean() throws Exception {
+        // Clear the child tables that reference users before deleting users: a prior game-creating
+        // test class can leave games/moves/ratings rows (these tests share one Testcontainers
+        // Postgres and test order isn't guaranteed), which would otherwise block users.deleteAll().
+        ratings.deleteAll();
+        moves.deleteAll();
+        games.deleteAll();
         users.deleteAll();
         register("dave", "dave@example.com", "correcthorse");
     }

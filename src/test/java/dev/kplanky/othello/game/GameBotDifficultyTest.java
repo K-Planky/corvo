@@ -8,6 +8,7 @@ import dev.kplanky.othello.domain.BotSide;
 import dev.kplanky.othello.domain.Game;
 import dev.kplanky.othello.domain.User;
 import dev.kplanky.othello.repository.GameRepository;
+import dev.kplanky.othello.repository.MoveRepository;
 import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import java.util.UUID;
@@ -32,6 +33,9 @@ class GameBotDifficultyTest {
     GameRepository games;
 
     @Autowired
+    MoveRepository moves;
+
+    @Autowired
     RatingHistoryRepository ratings;
 
     @Autowired
@@ -41,7 +45,10 @@ class GameBotDifficultyTest {
 
     @BeforeEach
     void setUp() {
+        // Clear the full child chain before users: a prior test class may leave moves/ratings rows
+        // that would block games.deleteAll() / users.deleteAll() (FKs), and test order isn't fixed.
         ratings.deleteAll();
+        moves.deleteAll();
         games.deleteAll();
         users.deleteAll();
         humanId = users.save(new User("human", "human@example.com", "hash")).getId();

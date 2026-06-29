@@ -8,6 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import dev.kplanky.othello.TestcontainersConfiguration;
 import dev.kplanky.othello.domain.User;
+import dev.kplanky.othello.repository.GameRepository;
+import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,10 +38,25 @@ class LeaderboardTest {
     UserRepository users;
 
     @Autowired
+    GameRepository games;
+
+    @Autowired
+    MoveRepository moves;
+
+    @Autowired
+    RatingHistoryRepository ratings;
+
+    @Autowired
     MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
+        // Clear the child tables before users: games/rating_history reference users by FK, and a
+        // prior game-creating test class may have left rows that would block users.deleteAll()
+        // (test execution order isn't guaranteed, so don't assume a clean games table).
+        ratings.deleteAll();
+        moves.deleteAll();
+        games.deleteAll();
         users.deleteAll();
     }
 

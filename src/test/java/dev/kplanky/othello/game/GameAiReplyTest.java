@@ -26,9 +26,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
 /**
- * M4.3 acceptance (spec §7): after a human move the bot (ladder rung 1 — uniformly random) replies
- * through the same transactional apply pipeline, and in a forced-pass position the bot passes rather
- * than moving. The reply is synchronous in this slice (M8 moves it off-thread + WS push).
+ * M4.3 acceptance (spec §7): after a human move the bot replies through the same transactional apply
+ * pipeline, and in a forced-pass position the bot passes rather than moving. The reply is synchronous
+ * in this slice (M8 moves it off-thread + WS push). The bot now plays the M6 difficulty engine
+ * (iterative deepening) rather than M4's random rung; these assertions stay behaviour-agnostic (a
+ * legal reply / a forced pass), so they hold for either.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -145,8 +147,8 @@ class GameAiReplyTest {
     void fullVsAiGamePlaysToTerminalThroughSubmitMove() {
         UUID gameId = gameService.createVsAiGame(humanId, BotDifficulty.EASY, BotSide.WHITE).id();
 
-        // The human (Black) submits a move each turn; the bot (White, random) replies inside the same
-        // call, so after every non-terminal submitMove it is the human's turn again.
+        // The human (Black) submits a move each turn; the bot (White) replies inside the same call,
+        // so after every non-terminal submitMove it is the human's turn again.
         Game game = games.findById(gameId).orElseThrow();
         int guard = 0;
         while (game.getStatus() == GameStatus.IN_PROGRESS) {

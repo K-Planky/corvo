@@ -6,7 +6,18 @@ package dev.kplanky.othello.domain;
  * {@code HARD = 1800}. Bots are not a {@code User} row — difficulty is an enum on {@code Game}.
  */
 public enum BotDifficulty {
-    EASY,
-    MEDIUM,
-    HARD
+    EASY(1000),
+    MEDIUM(1500),
+    HARD(1800);
+
+    private final int rating;
+
+    BotDifficulty(int rating) {
+        this.rating = rating;
+    }
+
+    /** The bot's fixed Elo rating for this difficulty — only the human's rating moves (§8, M7). */
+    public int rating() {
+        return rating;
+    }
 }

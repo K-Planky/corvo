@@ -52,6 +52,14 @@ public class Game {
     @Column(name = "bot_difficulty", length = 16)
     private BotDifficulty botDifficulty;
 
+    /**
+     * The bot's fixed Elo rating (1000/1500/1800), captured from the difficulty at creation so M7's
+     * rating math reads it directly and historical games keep the rating they were played at.
+     * {@code null} for human-vs-human games (no bot).
+     */
+    @Column(name = "bot_rating")
+    private Integer botRating;
+
     @Column(name = "board_black", nullable = false)
     private long boardBlack;
 
@@ -137,6 +145,14 @@ public class Game {
 
     public void setBotDifficulty(BotDifficulty botDifficulty) {
         this.botDifficulty = botDifficulty;
+    }
+
+    public Integer getBotRating() {
+        return botRating;
+    }
+
+    public void setBotRating(Integer botRating) {
+        this.botRating = botRating;
     }
 
     public long getBoardBlack() {

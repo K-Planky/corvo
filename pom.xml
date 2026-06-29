@@ -137,6 +137,17 @@
                     <environmentVariables>
                         <JWT_SECRET>test-only-jwt-signing-secret-not-used-in-production-0123456789</JWT_SECRET>
                     </environmentVariables>
+                    <!-- Shrink the AI think-time so integration tests that play out vs-AI games don't
+                         pay the real per-move budget. Caps every difficulty to 10 ms; depth-1 still
+                         completes (it's uninterruptible), so the bot plays a real legal move fast.
+                         Wired as a system property (not @TestPropertySource) on purpose: it leaves
+                         every @SpringBootTest sharing ONE cached Spring context, where a per-class
+                         property override would fragment the cache and slow CI. Trade-off: running
+                         these tests straight from an IDE (no Surefire) falls back to the 1 s default
+                         cap — pass -Dbot.sync-think-cap=10ms there if the vs-AI tests feel slow. -->
+                    <systemPropertyVariables>
+                        <bot.sync-think-cap>10ms</bot.sync-think-cap>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>

@@ -6,6 +6,7 @@ import dev.kplanky.othello.domain.Game;
 import dev.kplanky.othello.domain.GameStatus;
 import dev.kplanky.othello.domain.Move;
 import dev.kplanky.othello.domain.OpponentType;
+import dev.kplanky.othello.config.BotProperties;
 import dev.kplanky.othello.domain.RatingHistory;
 import dev.kplanky.othello.domain.User;
 import dev.kplanky.othello.engine.GameRules;
@@ -22,6 +23,7 @@ import dev.kplanky.othello.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +45,8 @@ public class GameService {
     private final GameRules<OthelloState, OthelloMove> rules;
     private final BotEngine botEngine;
     private final GameStateMapper mapper;
+    private final ApplicationEventPublisher events;
+    private final BotProperties botProperties;
 
     public GameService(
             GameRepository games,
@@ -51,7 +55,9 @@ public class GameService {
             RatingHistoryRepository ratings,
             GameRules<OthelloState, OthelloMove> rules,
             BotEngine botEngine,
-            GameStateMapper mapper) {
+            GameStateMapper mapper,
+            ApplicationEventPublisher events,
+            BotProperties botProperties) {
         this.games = games;
         this.moves = moves;
         this.users = users;
@@ -59,6 +65,8 @@ public class GameService {
         this.rules = rules;
         this.botEngine = botEngine;
         this.mapper = mapper;
+        this.events = events;
+        this.botProperties = botProperties;
     }
 
     /**
@@ -114,24 +122,27 @@ public class GameService {
     }
 
     /**
-     * The vs-AI human-submit flow (spec §7/§9): applies the human's {@code move} and then, if it is
-     * now the bot's turn and the game is still live, plays the bot's reply through the same
-     * transactional pipeline — so terminal handling and persistence are identical for human and bot
-     * moves. The bot plays the move chosen by its difficulty's {@link BotEngine} search, or passes
-     * when it has no legal move.
+     * The vs-AI human-submit flow (spec §7/§9). Applies the human's {@code move} and returns the
+     * resulting state. The bot's reply is then computed <em>asynchronously</em> (M8): this method
+     * returns immediately after the human's move and publishes an {@link AiReplyRequested} event, and
+     * {@link AiReplyService} computes + applies the reply off the request thread and pushes it over
+     * WebSocket — so a multi-second Hard search never holds the HTTP request open. The returned view
+     * therefore reflects only the human's move; the bot's move arrives as a {@code MOVE_MADE} push.
      *
-     * <p>The reply is synchronous here: a deliberate single-player-slice simplification, so the
-     * search budget is clamped (see {@code BotProperties.syncThinkCap}) to keep the request from
-     * blocking for seconds. M8 moves it off-thread and pushes it over WebSocket, restoring the full
-     * {@code HARD} budget.
+     * <p>When {@code bot.async-reply} is off the reply is played inline through the same transactional
+     * pipeline (clamped to {@code syncThinkCap}); this keeps the deterministic service tests free of a
+     * background worker racing their reads.
      */
     @Transactional
     public GameStateResponse submitMove(UUID gameId, UUID callerId, OthelloMove move) {
         Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
         authorizeMove(game, callerId, move);
+        boolean async = botProperties.asyncReply() && game.getOpponentType() == OpponentType.HUMAN_VS_AI;
         try {
             applyToGame(game, move);
-            playBotReplyIfDue(game);
+            if (!async) {
+                playBotReplyIfDue(game);
+            }
             // Force the @Version check now, inside the transaction, so a lost optimistic-lock race
             // surfaces here (and not as an unmapped failure at commit) where we can map it to 409.
             games.flush();
@@ -140,7 +151,55 @@ public class GameService {
             // transaction rolls back — the board is left exactly as the winning move set it.
             throw new ConcurrentMoveException(gameId, e);
         }
+        if (async) {
+            // Fires after this transaction commits (AFTER_COMMIT), so the worker reads the committed
+            // move. Covers both the bot's reply and pushing GAME_OVER when the human's move was terminal.
+            events.publishEvent(new AiReplyRequested(gameId, callerId));
+        }
         return toResponse(game, callerId);
+    }
+
+    /**
+     * Plans the async bot reply for {@code gameId} as seen by {@code humanId} (M8), read-only so the
+     * search in {@link AiReplyService} runs outside a transaction. Returns {@link BotReplyPlan.GameOver}
+     * when the human's move already ended the game, {@link BotReplyPlan.Reply} with the engine snapshot
+     * when it is the bot's turn, or {@link BotReplyPlan.Nothing} otherwise.
+     */
+    @Transactional(readOnly = true)
+    public BotReplyPlan planBotReply(UUID gameId, UUID humanId) {
+        Game game = games.findById(gameId).orElse(null);
+        if (game == null || game.getOpponentType() != OpponentType.HUMAN_VS_AI) {
+            return new BotReplyPlan.Nothing();
+        }
+        if (game.getStatus() != GameStatus.IN_PROGRESS) {
+            return new BotReplyPlan.GameOver(toResponse(game, humanId));
+        }
+        Player bot = botPlayer(game.getBotSide());
+        if (bot == null || game.getCurrentTurn() != bot) {
+            return new BotReplyPlan.Nothing();
+        }
+        return new BotReplyPlan.Reply(mapper.toState(game), game.getBotDifficulty());
+    }
+
+    /**
+     * Applies the asynchronously-computed bot {@code move} through the shared pipeline (M8) and returns
+     * the new state oriented to {@code humanId}. Empty when it is no longer the bot's turn — the game
+     * was resolved or a concurrent write won the optimistic-lock race — so the worker pushes nothing.
+     */
+    @Transactional
+    public Optional<GameStateResponse> applyBotReply(UUID gameId, OthelloMove move, UUID humanId) {
+        Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
+        Player bot = botPlayer(game.getBotSide());
+        if (game.getStatus() != GameStatus.IN_PROGRESS || bot == null || game.getCurrentTurn() != bot) {
+            return Optional.empty();
+        }
+        try {
+            applyToGame(game, move);
+            games.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            return Optional.empty();
+        }
+        return Optional.of(toResponse(game, humanId));
     }
 
     /**

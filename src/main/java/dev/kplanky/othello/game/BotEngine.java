@@ -47,6 +47,15 @@ public class BotEngine {
     }
 
     /**
+     * The move chooser for the <em>asynchronous</em> reply (M8): the full, uncapped think-time budget.
+     * Safe because the search runs off the request thread on the bounded worker pool and the move is
+     * pushed over WebSocket, so a multi-second Hard search holds no HTTP request open.
+     */
+    public Search<OthelloState, OthelloMove> asyncSearchFor(BotDifficulty difficulty) {
+        return new IterativeDeepeningSearch<>(rules, evaluator, ordering, properties.thinkTime(difficulty));
+    }
+
+    /**
      * The effective per-move budget for {@code difficulty}: the configured think-time, clamped to the
      * synchronous-think cap so a Hard search can't hold the HTTP request open for seconds before M8.
      */

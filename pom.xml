@@ -153,6 +153,12 @@
                          cap — pass -Dbot.sync-think-cap=10ms there if the vs-AI tests feel slow. -->
                     <systemPropertyVariables>
                         <bot.sync-think-cap>10ms</bot.sync-think-cap>
+                        <!-- Default the vs-AI reply to synchronous in-request so the deterministic
+                             service/REST tests can assert post-reply state right after submitMove
+                             without a background worker racing them. The async path (prod default) is
+                             covered by GameAsyncAiReplyTest, which opts back in via @TestPropertySource
+                             (a separate, intentional context). -->
+                        <bot.async-reply>false</bot.async-reply>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

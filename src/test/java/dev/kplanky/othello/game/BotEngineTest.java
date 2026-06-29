@@ -43,7 +43,7 @@ class BotEngineTest {
         // synchronous reply can't hold the request open for seconds (the M6/M8 gating rule).
         BotProperties capped = new BotProperties(
                 Duration.ofMillis(400), Duration.ofMillis(1500), Duration.ofMillis(4000),
-                Duration.ofMillis(500));
+                Duration.ofMillis(500), null);
         BotEngine engine = engineWith(capped);
         assertThat(engine.budgetFor(BotDifficulty.EASY)).isEqualTo(Duration.ofMillis(400));
         assertThat(engine.budgetFor(BotDifficulty.MEDIUM)).isEqualTo(Duration.ofMillis(500));
@@ -52,11 +52,12 @@ class BotEngineTest {
 
     @Test
     void defaultsAreTheSpecBudgetsAndAOneSecondCap() {
-        BotProperties defaults = new BotProperties(null, null, null, null);
+        BotProperties defaults = new BotProperties(null, null, null, null, null);
         assertThat(defaults.thinkTime(BotDifficulty.EASY)).isEqualTo(Duration.ofMillis(400));
         assertThat(defaults.thinkTime(BotDifficulty.MEDIUM)).isEqualTo(Duration.ofMillis(1500));
         assertThat(defaults.thinkTime(BotDifficulty.HARD)).isEqualTo(Duration.ofMillis(4000));
         assertThat(defaults.syncThinkCap()).isEqualTo(Duration.ofSeconds(1));
+        assertThat(defaults.asyncReply()).isTrue();
     }
 
     @Test
@@ -75,6 +76,6 @@ class BotEngineTest {
     private static BotProperties uncappedProperties() {
         return new BotProperties(
                 Duration.ofMillis(400), Duration.ofMillis(1500), Duration.ofMillis(4000),
-                Duration.ofSeconds(60));
+                Duration.ofSeconds(60), null);
     }
 }

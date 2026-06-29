@@ -6,6 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kplanky.othello.TestcontainersConfiguration;
+import dev.kplanky.othello.repository.GameRepository;
+import dev.kplanky.othello.repository.MoveRepository;
+import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +42,15 @@ class WebSocketConnectAuthTest {
     @Autowired
     UserRepository users;
 
+    @Autowired
+    GameRepository games;
+
+    @Autowired
+    MoveRepository moves;
+
+    @Autowired
+    RatingHistoryRepository ratings;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private WebSocketStompClient stompClient;
@@ -46,6 +58,11 @@ class WebSocketConnectAuthTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        // Clear the full FK child chain in order so this is order-independent under the shared
+        // Testcontainers Postgres (a game-creating WS test may run before this one) — see DECISIONS.
+        ratings.deleteAll();
+        moves.deleteAll();
+        games.deleteAll();
         users.deleteAll();
         stompClient = new WebSocketStompClient(new StandardWebSocketClient());
         stompClient.setMessageConverter(new StringMessageConverter());

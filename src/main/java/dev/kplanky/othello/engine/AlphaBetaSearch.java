@@ -39,17 +39,34 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
 
     private final GameRules<S, M> rules;
     private final Evaluator<S> evaluator;
+    private final MoveOrdering<S, M> ordering;
     private final int depth;
 
     private long nodes;
 
     /**
+     * Unordered alpha-beta — tries moves in {@link GameRules#getLegalMoves} order. Equivalent to
+     * passing {@link MoveOrdering#none()}; this is the node-count baseline an ordered search beats.
+     *
      * @param depth plies to search from the root; must be {@code >= 1}. Evaluator scores must stay
      *              within a range whose negation is representable (i.e. never {@code Integer.MIN_VALUE}).
      */
     public AlphaBetaSearch(GameRules<S, M> rules, Evaluator<S> evaluator, int depth) {
+        this(rules, evaluator, MoveOrdering.none(), depth);
+    }
+
+    /**
+     * Alpha-beta that tries moves in {@code ordering}'s preferred order at every node. A good
+     * ordering (likely-good moves first) makes cutoffs happen sooner, so the search visits strictly
+     * fewer nodes than the unordered baseline for the <em>same</em> position value (spec §7).
+     *
+     * @param depth plies to search from the root; must be {@code >= 1}. Evaluator scores must stay
+     *              within a range whose negation is representable (i.e. never {@code Integer.MIN_VALUE}).
+     */
+    public AlphaBetaSearch(GameRules<S, M> rules, Evaluator<S> evaluator, MoveOrdering<S, M> ordering, int depth) {
         this.rules = Objects.requireNonNull(rules, "rules");
         this.evaluator = Objects.requireNonNull(evaluator, "evaluator");
+        this.ordering = Objects.requireNonNull(ordering, "ordering");
         if (depth < 1) {
             throw new IllegalArgumentException("depth must be >= 1, was " + depth);
         }
@@ -68,6 +85,7 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
         if (moves.isEmpty()) {
             throw new IllegalStateException("no legal move available — the caller must pass");
         }
+        moves = ordering.order(state, moves);
 
         M best = null;
         int bestScore = NEG_INF;
@@ -102,6 +120,7 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
             // value is negated and the window swapped; it consumes a ply (a double pass terminates).
             return -search(rules.pass(state), depth - 1, -beta, -alpha);
         }
+        moves = ordering.order(state, moves);
         int best = NEG_INF;
         for (M move : moves) {
             int score = -search(rules.applyMove(state, move), depth - 1, -beta, -alpha);

@@ -19,9 +19,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * Stateless security wiring (spec §10). Sessions are disabled and CSRF is off because auth is
  * token-based, not cookie-based. BCrypt hashes passwords.
  *
- * <p>The public surface is {@code /health} and {@code /api/auth/**} (register + login); every other
- * request must carry a valid JWT, verified by the {@link JwtAuthenticationFilter} which runs before
- * the username/password filter and populates the security context.
+ * <p>The public surface is {@code /health}, {@code /api/auth/**} (register + login), and the
+ * read-only {@code GET /api/leaderboard} (§9, auth optional); every other request must carry a valid
+ * JWT, verified by the {@link JwtAuthenticationFilter} which runs before the username/password filter
+ * and populates the security context.
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -47,6 +48,9 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR)
                         .permitAll()
                         .requestMatchers("/health", "/api/auth/**")
+                        .permitAll()
+                        // The leaderboard is public (spec §9, auth optional) — readable without a JWT.
+                        .requestMatchers(HttpMethod.GET, "/api/leaderboard")
                         .permitAll()
                         // SPA shell + assets are served same-origin by this app (spec §13) and must
                         // load before authentication; the API stays protected by anyRequest() below.

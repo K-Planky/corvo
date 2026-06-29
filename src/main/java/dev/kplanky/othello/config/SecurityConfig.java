@@ -49,6 +49,11 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/health", "/api/auth/**")
                         .permitAll()
+                        // The STOMP/WebSocket handshake is anonymous at the HTTP layer; the JWT rides
+                        // in the STOMP CONNECT frame and is verified by StompAuthChannelInterceptor
+                        // (spec §9/§10), so a session never opens unauthenticated.
+                        .requestMatchers("/ws/**")
+                        .permitAll()
                         // Public reads (spec §9, auth optional) — the leaderboard and a user's stats.
                         .requestMatchers(HttpMethod.GET, "/api/leaderboard", "/api/users/*/stats")
                         .permitAll()

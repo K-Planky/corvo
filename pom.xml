@@ -43,6 +43,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- WebSocket/STOMP (M8): live push of AI/opponent moves. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- jjwt: sign/verify HS256 JWTs. impl + jackson are runtime-only per jjwt's split API. -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

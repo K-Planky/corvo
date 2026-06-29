@@ -98,6 +98,16 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
     }
 
     /**
+     * Advances a forced pass for the side to move (spec §6). Delegates to {@link #applyMove} with a
+     * pass move so the "a pass is legal only with zero legal placements" invariant lives in exactly
+     * one place: a pass from a position that <em>has</em> a legal move is rejected there.
+     */
+    @Override
+    public OthelloState pass(OthelloState state) {
+        return applyMove(state, OthelloMove.pass());
+    }
+
+    /**
      * Bitboard of opponent discs flipped by placing a disc on {@code square} (0..63) for the side to
      * move. Empty (0) means the placement brackets nothing — i.e. it is not a legal move.
      *

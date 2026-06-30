@@ -107,6 +107,24 @@ class AuthLoginAndJwtTest {
     }
 
     @Test
+    void meWithValidTokenReturnsTheCurrentUser() throws Exception {
+        String token = loginAndGetToken("dave", "correcthorse");
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("dave"))
+                .andExpect(jsonPath("$.email").value("dave@example.com"))
+                // Carries the live Elo so a returning client / a just-finished game reads the current
+                // rating rather than the stale value from the original login response.
+                .andExpect(jsonPath("$.eloRating").isNumber());
+    }
+
+    @Test
+    void meWithoutTokenReturns401() throws Exception {
+        mockMvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void protectedEndpointWithMalformedTokenReturns401() throws Exception {
         mockMvc.perform(get("/api/ping").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt"))
                 .andExpect(status().isUnauthorized());

@@ -585,8 +585,21 @@ body {
   justify-content: center;
   align-items: center;
   gap: 0.75rem;
-  /* Reserve one button's height (a .btn measures ~2.39rem) so the row holds the same height whether
-     it's empty, showing "Pass", or showing "Back to lobby". The page is vertically centered, so a
-     row that grew from nothing would shove the whole board upward each time Pass appears. */
+  /* Reserve one button's height so the row holds the same height whether it's empty, showing
+     "Pass", or showing "Back to lobby". The page is vertically centered, so a row that grew from
+     nothing would shove the whole board upward each time Pass appears. */
   min-height: 2.4rem;
+}
+
+/* Pin the action buttons to exactly the reserved height. With the default content-box sizing a
+   .btn renders ~2.46rem tall (padding + border + line-height), overflowing the 2.4rem reserve by
+   ~1px and nudging the centered layout up when Pass appears. Fixing the height (border-box, padding
+   absorbed by flex centering) makes button == reserve, so the row never changes size. */
+.actions .btn {
+  box-sizing: border-box;
+  height: 2.4rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: inline-flex;
+  align-items: center;
 }

@@ -28,6 +28,10 @@ export default function GameView({ initial, onExit }: GameViewProps) {
   const [game, setGame] = useState<GameState>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // True while a board update is staged but not yet shown: the on-screen `game` is intentionally
+  // lagging the true state, so the board must not be treated as live (it'd flash the now-stale
+  // legal-move hints / Pass button until the staged state lands). See showState.
+  const [staging, setStaging] = useState(false);
 
   // Stage board updates so each state shows for >= STAGE_MS and its capture animation can play.
   // Seeded to -Infinity so the first update always shows immediately regardless of the clock origin.
@@ -35,36 +39,49 @@ export default function GameView({ initial, onExit }: GameViewProps) {
   const pending = useRef<GameState | null>(null);
   const stageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showState = useCallback((next: GameState) => {
-    const wait = lastShownAt.current + STAGE_MS - performance.now();
-    if (stageTimer.current === null && wait <= 0) {
-      lastShownAt.current = performance.now();
-      setGame(next);
-      return;
-    }
-    // The previous state is still inside its animation window: defer this one (latest wins).
-    pending.current = next;
-    if (stageTimer.current === null) {
-      stageTimer.current = setTimeout(() => {
-        stageTimer.current = null;
-        const queued = pending.current;
-        pending.current = null;
-        if (queued) {
-          lastShownAt.current = performance.now();
-          setGame(queued);
-        }
-      }, Math.max(0, wait));
-    }
+  // Put a state on screen now: record when it landed (for the next stage gap) and render it.
+  const commit = useCallback((next: GameState) => {
+    lastShownAt.current = performance.now();
+    setGame(next);
   }, []);
 
+  const showState = useCallback(
+    (next: GameState) => {
+      const wait = lastShownAt.current + STAGE_MS - performance.now();
+      if (stageTimer.current === null && wait <= 0) {
+        commit(next);
+        return;
+      }
+      // The previous state is still inside its animation window: defer this one (latest wins). Mark
+      // the board as staging so it stops reading as live until the deferred state is committed.
+      pending.current = next;
+      setStaging(true);
+      if (stageTimer.current === null) {
+        stageTimer.current = setTimeout(() => {
+          stageTimer.current = null;
+          const queued = pending.current;
+          pending.current = null;
+          if (queued) commit(queued);
+          setStaging(false);
+        }, Math.max(0, wait));
+      }
+    },
+    [commit],
+  );
+
   // Drop any pending staged update when the game unmounts (e.g. back to lobby).
-  useEffect(() => () => {
-    if (stageTimer.current !== null) clearTimeout(stageTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (stageTimer.current !== null) clearTimeout(stageTimer.current);
+    },
+    [],
+  );
 
   const you = humanSide(game);
   const over = isOver(game);
-  const yourTurn = !over && game.currentTurn === you;
+  // While `staging`, the on-screen `game` is a lagging state we're holding for its animation; don't
+  // let it drive interactivity or the Pass prompt, or the stale board flashes as live mid-gap.
+  const yourTurn = !over && !staging && game.currentTurn === you;
   const mustPass = yourTurn && game.legalMoves.length === 0;
   // It's the bot's turn and not over ⇒ the server is computing the reply it will push to us.
   const botThinking = !over && !yourTurn;

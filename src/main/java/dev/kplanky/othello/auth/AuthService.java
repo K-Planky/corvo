@@ -6,6 +6,7 @@ import dev.kplanky.othello.auth.dto.RegisterRequest;
 import dev.kplanky.othello.auth.dto.UserResponse;
 import dev.kplanky.othello.domain.User;
 import dev.kplanky.othello.repository.UserRepository;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -75,5 +76,16 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
         return new AuthResponse(jwtService.issueToken(user), UserResponse.from(user));
+    }
+
+    /**
+     * The current user behind a valid JWT (spec §9, {@code GET /api/auth/me}). Lets a returning
+     * client rehydrate its session from a stored token without re-entering credentials, and re-read
+     * its now-current Elo after a game. A token whose user no longer exists is treated as invalid
+     * (401) so the client clears it and falls back to the sign-in screen.
+     */
+    @Transactional(readOnly = true)
+    public UserResponse me(UUID userId) {
+        return users.findById(userId).map(UserResponse::from).orElseThrow(InvalidCredentialsException::new);
     }
 }

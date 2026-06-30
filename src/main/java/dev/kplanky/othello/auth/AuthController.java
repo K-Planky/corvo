@@ -1,10 +1,14 @@
 package dev.kplanky.othello.auth;
 
+import dev.kplanky.othello.auth.JwtService.JwtPrincipal;
 import dev.kplanky.othello.auth.dto.AuthResponse;
 import dev.kplanky.othello.auth.dto.LoginRequest;
 import dev.kplanky.othello.auth.dto.RegisterRequest;
+import dev.kplanky.othello.auth.dto.UserResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,5 +35,11 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    /** The signed-in user behind the bearer token — used to rehydrate a session and re-read Elo. */
+    @GetMapping("/me")
+    public UserResponse me(@AuthenticationPrincipal JwtPrincipal principal) {
+        return authService.me(principal.userId());
     }
 }

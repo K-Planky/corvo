@@ -19,10 +19,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * Stateless security wiring (spec §10). Sessions are disabled and CSRF is off because auth is
  * token-based, not cookie-based. BCrypt hashes passwords.
  *
- * <p>The public surface is {@code /health}, {@code /api/auth/**} (register + login), and the
- * read-only {@code GET /api/leaderboard} and {@code GET /api/users/{id}/stats} (§9, auth optional);
- * every other request must carry a valid JWT, verified by the {@link JwtAuthenticationFilter} which
- * runs before the username/password filter and populates the security context.
+ * <p>The public surface is {@code /health}, {@code /api/auth/register} + {@code /api/auth/login},
+ * and the read-only {@code GET /api/leaderboard} and {@code GET /api/users/{id}/stats} (§9, auth
+ * optional); every other request — including {@code GET /api/auth/me} — must carry a valid JWT,
+ * verified by the {@link JwtAuthenticationFilter} which runs before the username/password filter and
+ * populates the security context.
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -47,7 +48,9 @@ public class SecurityConfig {
                         // overwritten with 401 by the entry point — masking the real status.
                         .dispatcherTypeMatchers(DispatcherType.ERROR)
                         .permitAll()
-                        .requestMatchers("/health", "/api/auth/**")
+                        // Only register + login are public; GET /api/auth/me reads the caller's own
+                        // identity and so falls through to anyRequest().authenticated() below.
+                        .requestMatchers("/health", "/api/auth/register", "/api/auth/login")
                         .permitAll()
                         // The STOMP/WebSocket handshake is anonymous at the HTTP layer; the JWT rides
                         // in the STOMP CONNECT frame and is verified by StompAuthChannelInterceptor

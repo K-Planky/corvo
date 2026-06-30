@@ -6,6 +6,7 @@ import type {
   Difficulty,
   GameState,
   BotSide,
+  User,
 } from './types';
 
 const TOKEN_KEY = 'othello.token';
@@ -115,6 +116,13 @@ export async function login(
   });
   setToken(auth.token);
   return auth;
+}
+
+/** The signed-in user behind the stored token. Rehydrates a session on reload (the token persists in
+ *  localStorage but the User object doesn't) and re-reads the current Elo after a game. A 401 means
+ *  the token is gone/expired — callers clear it and show the sign-in screen. */
+export function me(): Promise<User> {
+  return request<User>('/auth/me');
 }
 
 export function createGame(

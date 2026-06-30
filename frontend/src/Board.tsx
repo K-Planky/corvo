@@ -8,7 +8,7 @@
 // GameView staggers the human move and the bot's WebSocket reply (STAGE_MS) rather than letting a
 // fast reply overwrite the human-move frame before it animates — see GameView's showState.
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import type { Player } from './types';
 
 interface BoardProps {
@@ -31,12 +31,19 @@ export default function Board({
 }: BoardProps) {
   const legal = new Set(legalMoves);
 
-  // Previous board, for change detection. Updated after paint so this render sees the old value.
+  // Previous board, for the flip/pop change detection. We hold the *pre-change* board and only
+  // advance it when `cells` actually changes — not on every render. So a captured disc keeps
+  // rendering as the same <flipper> element (stable key) across re-renders that *don't* change the
+  // board — e.g. the parent toggling `busy`/`staging` mid-flip — and React preserves the in-flight
+  // CSS animation instead of swapping in a static disc and cutting it short. (Updating prev in an
+  // effect instead would make any such re-render drop the animation early.)
   const prevRef = useRef(cells);
+  const curRef = useRef(cells);
+  if (cells !== curRef.current) {
+    prevRef.current = curRef.current;
+    curRef.current = cells;
+  }
   const prev = prevRef.current;
-  useEffect(() => {
-    prevRef.current = cells;
-  }, [cells]);
 
   // Squares where a disc was just placed (empty -> disc). Captures cascade outward from these.
   const placed: number[] = [];

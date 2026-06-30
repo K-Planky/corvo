@@ -13,10 +13,11 @@ import { humanSide, isOver, type GameState, type Player } from './types';
 // move and the bot's reply arrive as two separate updates (the move POST, then the WebSocket push);
 // a fast bot pushes its reply within a frame of the human move, so without staging React commits the
 // reply DOM over the human-move DOM before it paints and the capture animation never plays. This gap
-// covers the longest disc animation (`disc-flip`, 450ms in index.css) so each move's flip is seen;
-// it also doubles as a natural "bot is thinking" beat. Successive states for the *same* board
-// (the bot's MOVE_MADE then its YOUR_TURN/GAME_OVER carry identical cells) collapse harmlessly.
-export const STAGE_MS = 480;
+// must clear the longest disc animation (`disc-flip`, 450ms in index.css) so each move's flip is
+// seen; the margin beyond that is a deliberate "bot is thinking" beat so a fast bot doesn't snap back
+// the instant the human's flip finishes (~300ms here). Successive states for the *same* board (the
+// bot's MOVE_MADE then its YOUR_TURN/GAME_OVER carry identical cells) collapse harmlessly.
+export const STAGE_MS = 750;
 
 interface GameViewProps {
   initial: GameState;

@@ -308,7 +308,13 @@ body {
 /* ---- game ---- */
 
 .game {
-  width: min(520px, 96vw);
+  /* Single knob for the whole play area. The board fills this width, and the scoreboard/banner
+     dimensions below are derived from it as `calc(var(--play) * factor)` (factors chosen so the look
+     is unchanged at the old 520px) — so bumping this one value zooms the board *and* its chrome
+     together and proportionally, instead of the board growing while the fixed-size chrome only
+     widens. Capped at 96vw so it still shrinks to fit narrow screens. */
+  --play: min(600px, 96vw);
+  width: var(--play);
   display: grid;
   gap: 1rem;
 }
@@ -337,7 +343,8 @@ body {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 0.6rem 0.9rem;
+  /* Scales with the play area (see --play on .game). */
+  padding: calc(var(--play) * 0.0185) calc(var(--play) * 0.0277);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -347,14 +354,14 @@ body {
 }
 
 .score-count {
-  font-size: 1.4rem;
+  font-size: calc(var(--play) * 0.0431);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .score-you {
   margin-left: auto;
-  font-size: 0.7rem;
+  font-size: calc(var(--play) * 0.0215);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
@@ -367,8 +374,10 @@ body {
   justify-content: center;
   gap: 0.5rem;
   font-weight: 600;
-  /* Slimmer status strip (was a chunky full-pad slab that read like a disabled button). */
-  padding: 0.4rem 0.8rem;
+  /* Slimmer status strip (was a chunky full-pad slab that read like a disabled button). Font and
+     padding scale with the play area (--play on .game). */
+  font-size: calc(var(--play) * 0.0308);
+  padding: calc(var(--play) * 0.0123) calc(var(--play) * 0.0246);
   border-radius: 999px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -376,13 +385,14 @@ body {
 
 /* The terminal win/lose/draw banner keeps the fuller pill look. */
 .banner-result {
-  padding: 0.55rem 0.8rem;
+  padding: calc(var(--play) * 0.0169) calc(var(--play) * 0.0246);
 }
 
-/* Higher specificity than .disc (which sets width: 76%) so the swatch stays a fixed small dot. */
+/* Higher specificity than .disc (which sets width: 76%) so the swatch stays a small dot; scales with
+   the play area (--play on .game). */
 .banner .turn-dot {
-  width: 15px;
-  height: 15px;
+  width: calc(var(--play) * 0.0288);
+  height: calc(var(--play) * 0.0288);
   flex: none;
 }
 
@@ -470,8 +480,9 @@ body {
 }
 
 .disc-sm {
-  width: 18px;
-  height: 18px;
+  /* Scoreboard swatch — scales with the play area (--play on .game). */
+  width: calc(var(--play) * 0.0346);
+  height: calc(var(--play) * 0.0346);
 }
 
 /* A freshly placed disc pops in. */
@@ -512,6 +523,15 @@ body {
 
 .flipper .face-back {
   transform: rotateY(180deg);
+}
+
+/* Only the resting (back) face casts the disc's drop shadow. `backface-visibility: hidden` hides the
+   back-facing front face's *surface* but browsers still paint its box-shadow, so without this both
+   faces' drop shadows stack and a captured disc sits under a doubled, too-dark shadow until its
+   square next changes. The front face is only briefly visible mid-flip, edge-on, where the missing
+   drop reads as the disc tilting — so dropping its shadow costs nothing. */
+.flipper .face:not(.face-back) {
+  box-shadow: none;
 }
 
 @keyframes disc-flip {
@@ -563,6 +583,10 @@ body {
 .actions {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 0.75rem;
-  min-height: 1px;
+  /* Reserve one button's height (a .btn measures ~2.39rem) so the row holds the same height whether
+     it's empty, showing "Pass", or showing "Back to lobby". The page is vertically centered, so a
+     row that grew from nothing would shove the whole board upward each time Pass appears. */
+  min-height: 2.4rem;
 }

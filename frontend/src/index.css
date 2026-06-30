@@ -448,8 +448,6 @@ body {
   display: grid;
   place-items: center;
   cursor: default;
-  /* Depth for the disc-capture flip. */
-  perspective: 320px;
 }
 
 .square:not(:disabled) {
@@ -502,11 +500,44 @@ body {
   }
 }
 
-/* A captured disc flips from its old colour (front face) to its new one (back face). */
-.flipper {
+/* A captured disc flips from its old colour (front face) to its new one (back face). The wrapper
+   sizes/positions the disc and owns the 3D perspective; the flipper inside it does the rotating. */
+.flip-wrap {
   position: relative;
   width: 76%;
   aspect-ratio: 1;
+  perspective: 320px;
+}
+
+/* The disc's drop shadow, on a layer that never rotates so it's present in every phase of the flip
+   (waiting, flipping, resting) rather than only while a shadowed face happens to be front-facing.
+   Matches the static .disc drop; a single neutral opacity reads fine for both colours. */
+.flip-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+  /* Narrow the shadow to match the disc's apparent width through the flip, so its hollow circle
+     isn't exposed behind the edge-on disc. Shares the flipper's delay (set inline) so they stay in
+     lockstep across the cascade. */
+  animation: shadow-squash 450ms ease-in-out both;
+}
+
+@keyframes shadow-squash {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    /* Width narrows with the edge-on disc but keeps a faint sliver; height eases in a touch so the
+       shadow shrinks overall rather than vanishing. */
+    transform: scale(0.2, 0.9);
+  }
+}
+
+.flipper {
+  position: absolute;
+  inset: 0;
   transform-style: preserve-3d;
   /* `both`: during a cascade's stagger delay the disc holds its old colour (the from-state) until
      its flip fires, then stays on the new colour. */
@@ -525,13 +556,15 @@ body {
   transform: rotateY(180deg);
 }
 
-/* Only the resting (back) face casts the disc's drop shadow. `backface-visibility: hidden` hides the
-   back-facing front face's *surface* but browsers still paint its box-shadow, so without this both
-   faces' drop shadows stack and a captured disc sits under a doubled, too-dark shadow until its
-   square next changes. The front face is only briefly visible mid-flip, edge-on, where the missing
-   drop reads as the disc tilting — so dropping its shadow costs nothing. */
-.flipper .face:not(.face-back) {
-  box-shadow: none;
+/* The faces carry only their surface rim (the inset highlight/shading that defines the disc edge);
+   the drop shadow comes from .flip-shadow above. Overriding here drops the outer drop shadow that
+   .disc-black/.disc-white set, so it isn't doubled against the layer's. */
+.flipper .face.disc-black {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.flipper .face.disc-white {
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.12);
 }
 
 @keyframes disc-flip {
@@ -549,6 +582,10 @@ body {
   .flipper {
     animation: none;
     transform: rotateY(180deg);
+  }
+  /* No flip to track — keep the shadow at full width. */
+  .flip-shadow {
+    animation: none;
   }
   .disc-pop,
   .flipper .face-back {

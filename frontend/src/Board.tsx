@@ -8,8 +8,15 @@
 // GameView staggers the human move and the bot's WebSocket reply (STAGE_MS) rather than letting a
 // fast reply overwrite the human-move frame before it animates — see GameView's showState.
 
-import { useRef } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import type { Player } from './types';
+
+// How long to keep a captured disc as a 3D <flipper> before settling it into a static <disc>. Must
+// outlast the flip itself: disc-flip is 450ms (index.css) plus up to ~350ms of outward cascade
+// stagger (flipDelay). A resting flipper sits at rotateY(180deg) in a preserve-3d context where its
+// back face's drop shadow doesn't paint, so leaving it as a flipper makes the disc look shadowless;
+// the static disc it settles into casts the shadow correctly.
+const FLIP_SETTLE_MS = 850;
 
 interface BoardProps {
   cells: string;
@@ -36,7 +43,7 @@ export default function Board({
   // rendering as the same <flipper> element (stable key) across re-renders that *don't* change the
   // board — e.g. the parent toggling `busy`/`staging` mid-flip — and React preserves the in-flight
   // CSS animation instead of swapping in a static disc and cutting it short. (Updating prev in an
-  // effect instead would make any such re-render drop the animation early.)
+  // effect synchronously would make any such re-render drop the animation early.)
   const prevRef = useRef(cells);
   const curRef = useRef(cells);
   if (cells !== curRef.current) {
@@ -44,6 +51,20 @@ export default function Board({
     curRef.current = cells;
   }
   const prev = prevRef.current;
+
+  // Once the flip has played, advance `prev` to the current board so captured discs settle from
+  // <flipper>s into static <disc>s — see FLIP_SETTLE_MS for why the resting state must be a plain
+  // disc. This fires *after* the animation window (re-renders before it keep the flipper alive, so
+  // nothing is cut), and re-scheduling on each `cells` change keeps successive moves animating.
+  const [, settle] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (prevRef.current === cells) return; // already settled (no flip in progress)
+    const id = setTimeout(() => {
+      prevRef.current = cells;
+      settle();
+    }, FLIP_SETTLE_MS);
+    return () => clearTimeout(id);
+  }, [cells]);
 
   // Squares where a disc was just placed (empty -> disc). Captures cascade outward from these.
   const placed: number[] = [];

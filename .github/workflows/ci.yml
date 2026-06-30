@@ -102,11 +102,14 @@ jobs:
         uses: actions/checkout@v5
 
       # Pin the scanner binary for reproducible CLI behaviour; the vuln DB is fetched
-      # fresh at scan time regardless. These are the exact commands validated locally.
+      # fresh at scan time regardless. Download the install script (tag-pinned to the
+      # same trivy release) then run it as a separate step — don't pipe curl straight
+      # into a shell (semgrep gha-curl-pipe-shell; a hijacked URL would run arbitrary
+      # code on the runner).
       - name: Install Trivy
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin v0.71.2
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.71.2/contrib/install.sh -o install-trivy.sh
+          sh install-trivy.sh -b /usr/local/bin v0.71.2
 
       # (a) Filesystem scan — dependency CVEs from pom.xml + npm lockfiles. exit-code 1
       # so a finding fails the step; continue-on-error lets the image scan + uploads

@@ -124,6 +124,36 @@ describe('GameView', () => {
     expect(screen.getAllByText('3')).toHaveLength(2);
   });
 
+  it('shows the human move first even when a fast bot reply races ahead of the POST response', async () => {
+    // Near the end of a game the bot's search is near-instant, so its MOVE_MADE push (the board after
+    // BOTH moves, moveCount 2) can arrive over the socket before the move POST (human move only,
+    // moveCount 1) resolves. Regression: the post-bot board was shown in one step, skipping the
+    // human's own move. Hold the POST resolution so we can deliver the push first.
+    let resolveMove!: (s: GameState) => void;
+    vi.mocked(submitMove).mockReturnValue(new Promise<GameState>((res) => (resolveMove = res)));
+    render(<GameView initial={OPENING} onExit={() => {}} />);
+
+    await userEvent.click(screen.getByLabelText('d3'));
+    await waitFor(() => expect(submitMove).toHaveBeenCalledWith('g1', { position: 19 }));
+
+    // Bot reply races in while the human-move POST is still pending. It must be held, not shown: the
+    // board is still the opening (Black 2), not the post-bot board (Black 3).
+    act(() => pushEvent({ type: 'MOVE_MADE', state: AFTER_BOT_REPLY }));
+    expect(screen.getAllByText('2')).toHaveLength(2);
+
+    // POST resolves: the human-move state shows first — Black 4, bot's turn — not the bot reply.
+    await act(async () => resolveMove(AFTER_HUMAN_D3));
+    await waitFor(() => expect(screen.getByText('Bot is thinking…')).toBeInTheDocument());
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.queryByText('Your move')).not.toBeInTheDocument();
+
+    // Only after the stage window does the raced-in bot reply land.
+    await waitFor(() => expect(screen.getByText('Your move')).toBeInTheDocument(), {
+      timeout: STAGE_MS + 1000,
+    });
+    expect(screen.getAllByText('3')).toHaveLength(2);
+  });
+
   it('renders the terminal result from a GAME_OVER push', async () => {
     render(<GameView initial={OPENING} onExit={() => {}} />);
 

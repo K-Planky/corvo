@@ -15,8 +15,9 @@ import { humanSide, isOver, type GameState, type Player } from './types';
 // reply DOM over the human-move DOM before it paints and the capture animation never plays. This gap
 // must clear the longest disc animation (`disc-flip`, 450ms in index.css) so each move's flip is
 // seen; the margin beyond that is a deliberate "bot is thinking" beat so a fast bot doesn't snap back
-// the instant the human's flip finishes (~300ms here). Successive states for the *same* board (the
-// bot's MOVE_MADE then its YOUR_TURN/GAME_OVER carry identical cells) collapse harmlessly.
+// the instant the human's flip finishes (~300ms here). States are shown in `moveCount` order, and
+// successive states for the *same* board (the bot's MOVE_MADE then its identical YOUR_TURN/GAME_OVER)
+// collapse harmlessly — see showState.
 export const STAGE_MS = 750;
 
 interface GameViewProps {
@@ -34,39 +35,71 @@ export default function GameView({ initial, onExit }: GameViewProps) {
   const [staging, setStaging] = useState(false);
 
   // Stage board updates so each state shows for >= STAGE_MS and its capture animation can play.
-  // Seeded to -Infinity so the first update always shows immediately regardless of the clock origin.
+  // `lastShownAt` seeds to -Infinity so the first update shows immediately regardless of clock origin;
+  // `shownMoveCount` tracks the displayed state so out-of-order/duplicate pushes can't rewind it.
   const lastShownAt = useRef(Number.NEGATIVE_INFINITY);
-  const pending = useRef<GameState | null>(null);
+  const shownMoveCount = useRef(initial.moveCount);
+  const queue = useRef<GameState[]>([]);
   const stageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Put a state on screen now: record when it landed (for the next stage gap) and render it.
-  const commit = useCallback((next: GameState) => {
-    lastShownAt.current = performance.now();
-    setGame(next);
-  }, []);
+  // A human move is mid-flight (its POST is in progress). Near the end of a game the bot's search is
+  // near-instant, so its reply (a MOVE_MADE push carrying the board after *both* moves) can reach us
+  // over the socket before that POST resolves. Processed as-is it would show the post-bot board in one
+  // step — the human's own move never animating, sometimes rewinding when the late POST lands. So
+  // while a move is in flight we hold the latest incoming push and replay it only once the human-move
+  // state has been queued (see play()), which keeps them in moveCount order.
+  const moveInFlight = useRef(false);
+  const heldPush = useRef<GameState | null>(null);
 
+  // Show the head of the queue once its STAGE_MS gap since the last shown state has elapsed, then
+  // reschedule for the next. `flushRef` lets the timer always call the latest closure.
+  const flushRef = useRef<() => void>(() => {});
+  const flush = useCallback(() => {
+    if (stageTimer.current !== null || queue.current.length === 0) return;
+    const wait = lastShownAt.current + STAGE_MS - performance.now();
+    if (wait > 0) {
+      setStaging(true);
+      stageTimer.current = setTimeout(() => {
+        stageTimer.current = null;
+        flushRef.current();
+      }, wait);
+      return;
+    }
+    const next = queue.current.shift()!;
+    lastShownAt.current = performance.now();
+    shownMoveCount.current = next.moveCount;
+    setGame(next);
+    const more = queue.current.length > 0;
+    setStaging(more);
+    if (more) {
+      stageTimer.current = setTimeout(() => {
+        stageTimer.current = null;
+        flushRef.current();
+      }, STAGE_MS);
+    }
+  }, []);
+  flushRef.current = flush;
+
+  // Enqueue a server state for display, ordered by moveCount. A state older than what's already shown
+  // or queued is dropped (an out-of-order or duplicate push can never rewind the board); a state with
+  // the same moveCount is the same move's board (the bot's MOVE_MADE then its identical
+  // YOUR_TURN/GAME_OVER) — collapse to the latest, updating in place if it's already on screen so a
+  // status-only change like GAME_OVER still lands.
   const showState = useCallback(
     (next: GameState) => {
-      const wait = lastShownAt.current + STAGE_MS - performance.now();
-      if (stageTimer.current === null && wait <= 0) {
-        commit(next);
+      const tail = queue.current.length
+        ? queue.current[queue.current.length - 1].moveCount
+        : shownMoveCount.current;
+      if (next.moveCount < tail) return;
+      if (next.moveCount === tail) {
+        if (queue.current.length) queue.current[queue.current.length - 1] = next;
+        else setGame(next);
         return;
       }
-      // The previous state is still inside its animation window: defer this one (latest wins). Mark
-      // the board as staging so it stops reading as live until the deferred state is committed.
-      pending.current = next;
-      setStaging(true);
-      if (stageTimer.current === null) {
-        stageTimer.current = setTimeout(() => {
-          stageTimer.current = null;
-          const queued = pending.current;
-          pending.current = null;
-          if (queued) commit(queued);
-          setStaging(false);
-        }, Math.max(0, wait));
-      }
+      queue.current.push(next);
+      flush();
     },
-    [commit],
+    [flush],
   );
 
   // Drop any pending staged update when the game unmounts (e.g. back to lobby).
@@ -87,14 +120,25 @@ export default function GameView({ initial, onExit }: GameViewProps) {
   const botThinking = !over && !yourTurn;
 
   // Re-render live from server pushes: the bot's reply (MOVE_MADE) and the terminal result
-  // (GAME_OVER) arrive here rather than in the move POST's response. Re-subscribe per game id.
+  // (GAME_OVER) arrive here rather than in the move POST's response. Re-subscribe per game id. While a
+  // human move is in flight we hold the latest push (keeping the higher moveCount) so it can't be
+  // shown ahead of the human-move state the POST will return — see moveInFlight/play().
   useEffect(() => {
-    const sub = subscribeToGame(initial.id, (event) => showState(event.state));
+    const sub = subscribeToGame(initial.id, (event) => {
+      if (moveInFlight.current) {
+        if (!heldPush.current || event.state.moveCount >= heldPush.current.moveCount) {
+          heldPush.current = event.state;
+        }
+      } else {
+        showState(event.state);
+      }
+    });
     return () => sub.close();
   }, [initial.id, showState]);
 
   async function play(move: { position: number } | { pass: true }) {
     if (busy) return;
+    moveInFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -104,6 +148,14 @@ export default function GameView({ initial, onExit }: GameViewProps) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong.');
     } finally {
       setBusy(false);
+      moveInFlight.current = false;
+      // Replay a bot reply that raced in ahead of the POST response — now that the human-move state is
+      // queued, this lands after it in moveCount order rather than overwriting/preceding it.
+      if (heldPush.current) {
+        const held = heldPush.current;
+        heldPush.current = null;
+        showState(held);
+      }
     }
   }
 

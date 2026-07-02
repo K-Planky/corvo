@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -165,12 +166,16 @@ public class GameService {
             if (!async) {
                 playBotReplyIfDue(game);
             }
-            // Force the @Version check now, inside the transaction, so a lost optimistic-lock race
-            // surfaces here (and not as an unmapped failure at commit) where we can map it to 409.
+            // Force the write now, inside the transaction, so a lost concurrent-move race surfaces here
+            // (and not as an unmapped failure at commit) where we can map it to 409.
             games.flush();
-        } catch (ObjectOptimisticLockingFailureException e) {
-            // Another submission committed against this game first (§11); our version is stale. The
-            // transaction rolls back — the board is left exactly as the winning move set it.
+        } catch (ObjectOptimisticLockingFailureException | DataIntegrityViolationException e) {
+            // Another submission for this position committed first (§11). Two concurrent submissions on
+            // the same game collide as EITHER a stale @Version on the game UPDATE OR a duplicate
+            // (game_id, move_number) on the Move insert — whichever the flush hits first (Hibernate
+            // orders the insert before the update, so a real two-submission race usually trips the unique
+            // index). Both mean the same thing; roll back and surface a 409 so the caller retries against
+            // the fresh state. The board is left exactly as the winning move set it.
             throw new ConcurrentMoveException(gameId, e);
         }
         if (async) {

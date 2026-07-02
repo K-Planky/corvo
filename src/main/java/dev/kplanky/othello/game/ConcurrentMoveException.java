@@ -5,9 +5,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 /**
- * Two move submissions raced on the same game and this one lost the optimistic-lock check (§11): the
- * {@code @Version} it read was stale by flush time. Maps to 409 — the caller should retry against the
- * fresh state. The losing transaction rolls back, so the board is never left corrupted.
+ * Two move submissions raced on the same game and this one lost (§11): by flush time either the
+ * {@code @Version} it read was stale (the game UPDATE matched 0 rows) or another submission had already
+ * inserted the same {@code (game_id, move_number)} (the unique index — the second guard against a
+ * double move). Maps to 409 — the caller should retry against the fresh state. The losing transaction
+ * rolls back, so the board is never left corrupted.
  */
 @ResponseStatus(HttpStatus.CONFLICT)
 public class ConcurrentMoveException extends RuntimeException {

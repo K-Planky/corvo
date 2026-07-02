@@ -41,4 +41,14 @@ public class GameEventPublisher {
     public void yourTurn(UUID userId, GameStateResponse state) {
         broker.convertAndSendToUser(userId.toString(), "/queue/notifications", GameEvent.yourTurn(state));
     }
+
+    /**
+     * Matchmaking paired {@code userId} into a new game (spec §9/§15, M9.1), delivered on their
+     * personal queue {@code /user/queue/notifications} — the same routing as {@link #yourTurn}, so a
+     * user not yet in any game (and thus not subscribed to a game topic) still receives it.
+     * {@code state} is the new game oriented to the recipient; its {@code id} is the new {@code gameId}.
+     */
+    public void matchFound(UUID userId, GameStateResponse state) {
+        broker.convertAndSendToUser(userId.toString(), "/queue/notifications", GameEvent.matchFound(state));
+    }
 }

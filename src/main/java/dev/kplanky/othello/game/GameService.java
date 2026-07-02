@@ -23,6 +23,7 @@ import dev.kplanky.othello.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
@@ -107,6 +108,27 @@ public class GameService {
         }
 
         return toResponse(game, userId);
+    }
+
+    /**
+     * Creates a {@code HUMAN_VS_HUMAN} game for a matched pair (spec §9/§15, M9.1). Both sides carry a
+     * player id; there is no bot ({@code botSide} stays {@code NONE}, {@code botDifficulty}/
+     * {@code botRating} null). The two players are assigned to Black/White at random — Black moves
+     * first, so a fixed order would systematically favour one queue position. The board starts at the
+     * engine's initial position (Black to move) and no opening move is applied (both sides are human).
+     * Returns the new game id; the caller reads each player's oriented view via {@link #getGameState}.
+     */
+    @Transactional
+    public UUID createPvpGame(UUID playerA, UUID playerB) {
+        Game game = new Game();
+        game.setOpponentType(OpponentType.HUMAN_VS_HUMAN);
+        // Random side assignment for fairness (Black moves first).
+        boolean aIsBlack = ThreadLocalRandom.current().nextBoolean();
+        game.setBlackPlayerId(aIsBlack ? playerA : playerB);
+        game.setWhitePlayerId(aIsBlack ? playerB : playerA);
+        mapper.writeState(game, rules.initialState());
+        game = games.save(game);
+        return game.getId();
     }
 
     /**

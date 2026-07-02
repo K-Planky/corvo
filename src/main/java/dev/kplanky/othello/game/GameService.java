@@ -177,8 +177,32 @@ public class GameService {
             // Fires after this transaction commits (AFTER_COMMIT), so the worker reads the committed
             // move. Covers both the bot's reply and pushing GAME_OVER when the human's move was terminal.
             events.publishEvent(new AiReplyRequested(gameId, callerId));
+        } else if (game.getOpponentType() == OpponentType.HUMAN_VS_HUMAN) {
+            // PvP (M9.2): there is no bot reply, but the opponent isn't the one who POSTed, so they learn
+            // this move over WebSocket. Published in-tx, handled AFTER_COMMIT (so the push carries the
+            // committed board + any terminal Elo), the mirror of the vs-AI reply's push.
+            events.publishEvent(new PvpMoveApplied(gameId, callerId));
         }
         return toResponse(game, callerId);
+    }
+
+    /**
+     * Reads game {@code gameId} after a committed PvP move and describes the WebSocket push owed to the
+     * mover's opponent (M9.2): the state oriented to the opponent (their legal moves now that the turn
+     * has flipped) and whether the move ended the game. Empty for a non-PvP or missing game. Read-only —
+     * the push itself is done by {@link PvpMoveNotifier} after this returns.
+     */
+    @Transactional(readOnly = true)
+    public Optional<PvpMovePush> planPvpPush(UUID gameId, UUID moverId) {
+        Game game = games.findById(gameId).orElse(null);
+        if (game == null || game.getOpponentType() != OpponentType.HUMAN_VS_HUMAN) {
+            return Optional.empty();
+        }
+        UUID opponentId = moverId.equals(game.getBlackPlayerId())
+                ? game.getWhitePlayerId()
+                : game.getBlackPlayerId();
+        boolean terminal = game.getStatus() != GameStatus.IN_PROGRESS;
+        return Optional.of(new PvpMovePush(opponentId, toResponse(game, opponentId), terminal));
     }
 
     /**
@@ -341,16 +365,22 @@ public class GameService {
         // winnerId is the winning *human*; null when a bot wins or it's a draw (§5, Appendix C A1).
         game.setWinnerId(winner.map(side -> playerId(game, side)).orElse(null));
 
-        recordResult(game, Player.BLACK, winner);
-        recordResult(game, Player.WHITE, winner);
+        // Snapshot each side's opponent rating BEFORE either side's rating is updated, so a PvP
+        // symmetric update is order-independent (§8): otherwise WHITE would be scored against BLACK's
+        // already-updated rating (and their deltas wouldn't sum to zero). vs-AI is unaffected — the
+        // bot's rating is fixed and read from the game, and only the human side is recorded.
+        int blackOpponentRating = opponentRatingFor(game, Player.BLACK);
+        int whiteOpponentRating = opponentRatingFor(game, Player.WHITE);
+        recordResult(game, Player.BLACK, winner, blackOpponentRating);
+        recordResult(game, Player.WHITE, winner, whiteOpponentRating);
     }
 
     /**
      * Updates the human on {@code side}: their denormalized W/L/D counters <em>and</em> their Elo
-     * rating (spec §5/§8). A no-op for the bot (null) side — the bot has no {@code User} row and its
-     * rating is fixed (only the human's rating moves in a vs-AI game, §8).
+     * rating (spec §5/§8), scored against {@code opponentRating} (snapshotted before any update). A
+     * no-op for the bot (null) side — the bot has no {@code User} row and its rating is fixed.
      */
-    private void recordResult(Game game, Player side, Optional<Player> winner) {
+    private void recordResult(Game game, Player side, Optional<Player> winner, int opponentRating) {
         UUID userId = playerId(game, side);
         if (userId == null) {
             return; // bot side — no User row to update
@@ -367,26 +397,27 @@ public class GameService {
             user.recordLoss();
             score = Elo.LOSS;
         }
-        updateRating(game, side, user, score);
+        updateRating(game, user, opponentRating, score);
     }
 
     /**
-     * Applies the Elo change for {@code user} (seated on {@code side}) from this terminal game and
-     * records it in {@link RatingHistory} for the stats/graph endpoint (spec §8/§9). The opponent's
-     * rating is the bot's fixed rating in a vs-AI game; only the human's rating moves.
+     * Applies the Elo change for {@code user} from this terminal game and records it in
+     * {@link RatingHistory} for the stats/graph endpoint (spec §8/§9). {@code opponentRating} is the
+     * pre-game snapshot (the bot's fixed rating in a vs-AI game, or the other human's pre-update rating
+     * in PvP).
      */
-    private void updateRating(Game game, Player side, User user, double score) {
+    private void updateRating(Game game, User user, int opponentRating, double score) {
         int oldRating = user.getEloRating();
-        int newRating = Elo.updatedRating(oldRating, opponentRatingFor(game, side), score);
+        int newRating = Elo.updatedRating(oldRating, opponentRating, score);
         user.setEloRating(newRating);
         ratings.save(new RatingHistory(user.getId(), game.getId(), oldRating, newRating));
     }
 
     /**
      * The rating the player on {@code side} is scored against. In a vs-AI game the opponent is the
-     * bot, whose fixed rating was captured on the game at creation (§8). The human-opponent branch is
-     * for PvP (M9), which must snapshot both ratings before updating either so the symmetric update
-     * is order-independent — today only vs-AI reaches here.
+     * bot, whose fixed rating was captured on the game at creation (§8). In PvP it is the other human's
+     * rating — read here <em>before</em> any update (see {@link #finish}) so the symmetric update is
+     * order-independent.
      */
     private int opponentRatingFor(Game game, Player side) {
         UUID opponentId = playerId(game, side.opponent());

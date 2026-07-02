@@ -13,6 +13,7 @@ export default function Auth({ onAuthenticated }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,6 +22,10 @@ export default function Auth({ onAuthenticated }: AuthProps) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
+    if (registering && password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -65,6 +70,20 @@ export default function Auth({ onAuthenticated }: AuthProps) {
           />
         </label>
 
+        {registering && (
+          <label>
+            Confirm password
+            <input
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </label>
+        )}
+
         {error && <p className="error">{error}</p>}
 
         <button type="submit" className="btn btn-primary" disabled={busy}>
@@ -80,6 +99,7 @@ export default function Auth({ onAuthenticated }: AuthProps) {
           onClick={() => {
             setMode(registering ? 'login' : 'register');
             setError(null);
+            setConfirmPassword('');
           }}
         >
           {registering ? 'Sign in' : 'Create one'}

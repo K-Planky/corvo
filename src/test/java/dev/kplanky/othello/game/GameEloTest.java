@@ -63,7 +63,7 @@ class GameEloTest {
         moves.deleteAll();
         games.deleteAll();
         users.deleteAll();
-        humanId = users.save(new User("human", "human@example.com", "hash")).getId();
+        humanId = users.save(new User("human", "hash")).getId();
     }
 
     @Test

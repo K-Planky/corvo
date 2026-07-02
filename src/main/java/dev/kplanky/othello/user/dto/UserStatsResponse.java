@@ -7,9 +7,8 @@ import java.util.UUID;
 
 /**
  * Public stats for a user (spec §9): current rating, W/L/D counters, and the ordered rating history.
- * A public read — deliberately omits the email (PII); the outcome counters come from the user's
- * denormalized W/L/D, so a null {@code winnerId} on any game (a bot win, §5/Appendix C A1) is a
- * non-issue here.
+ * A public, unauthenticated read; the outcome counters come from the user's denormalized W/L/D, so a
+ * null {@code winnerId} on any game (a bot win, §5/Appendix C A1) is a non-issue here.
  */
 public record UserStatsResponse(
         UUID id,

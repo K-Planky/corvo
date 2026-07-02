@@ -93,12 +93,11 @@ async function errorMessage(res: Response): Promise<string> {
 
 export async function register(
   username: string,
-  email: string,
   password: string,
 ): Promise<AuthResponse> {
   const auth = await request<AuthResponse>('/auth/register', {
     method: 'POST',
-    body: { username, email, password },
+    body: { username, password },
     auth: false,
   });
   setToken(auth.token);

@@ -31,7 +31,7 @@ class EntityRoundTripTest {
 
     @Test
     void userRoundTrips() {
-        User user = new User("alice", "alice@example.com", "$2a$bcrypt-hash");
+        User user = new User("alice", "$2a$bcrypt-hash");
         user.setEloRating(1234);
         user.setGamesPlayed(10);
         user.setWins(6);
@@ -46,7 +46,6 @@ class EntityRoundTripTest {
         User loaded = em.find(User.class, id);
         assertThat(loaded.getId()).isEqualTo(id);
         assertThat(loaded.getUsername()).isEqualTo("alice");
-        assertThat(loaded.getEmail()).isEqualTo("alice@example.com");
         assertThat(loaded.getPasswordHash()).isEqualTo("$2a$bcrypt-hash");
         assertThat(loaded.getEloRating()).isEqualTo(1234);
         assertThat(loaded.getGamesPlayed()).isEqualTo(10);
@@ -158,7 +157,7 @@ class EntityRoundTripTest {
     }
 
     private User persistedUser(String username) {
-        User user = new User(username, username + "@example.com", "$2a$hash");
+        User user = new User(username, "$2a$hash");
         em.persist(user);
         return user;
     }

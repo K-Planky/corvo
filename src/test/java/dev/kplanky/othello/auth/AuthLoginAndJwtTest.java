@@ -58,7 +58,7 @@ class AuthLoginAndJwtTest {
         moves.deleteAll();
         games.deleteAll();
         users.deleteAll();
-        register("dave", "dave@example.com", "correcthorse");
+        register("dave", "correcthorse");
     }
 
     @Test
@@ -113,7 +113,6 @@ class AuthLoginAndJwtTest {
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("dave"))
-                .andExpect(jsonPath("$.email").value("dave@example.com"))
                 // Carries the live Elo so a returning client / a just-finished game reads the current
                 // rating rather than the stale value from the original login response.
                 .andExpect(jsonPath("$.eloRating").isNumber());
@@ -153,11 +152,11 @@ class AuthLoginAndJwtTest {
         return node.get("token").asText();
     }
 
-    private void register(String username, String email, String password) throws Exception {
+    private void register(String username, String password) throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"%s\",\"email\":\"%s\",\"password\":\"%s\"}"
-                                .formatted(username, email, password)))
+                        .content("{\"username\":\"%s\",\"password\":\"%s\"}"
+                                .formatted(username, password)))
                 .andExpect(status().isCreated());
     }
 }

@@ -12,7 +12,6 @@ interface AuthProps {
 export default function Auth({ onAuthenticated }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +25,7 @@ export default function Auth({ onAuthenticated }: AuthProps) {
     setError(null);
     try {
       const auth = registering
-        ? await register(username, email, password)
+        ? await register(username, password)
         : await login(username, password);
       onAuthenticated(auth.user);
     } catch (err) {
@@ -53,20 +52,6 @@ export default function Auth({ onAuthenticated }: AuthProps) {
             required
           />
         </label>
-
-        {registering && (
-          <label>
-            Email
-            <input
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </label>
-        )}
 
         <label>
           Password

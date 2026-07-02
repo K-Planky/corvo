@@ -61,7 +61,7 @@ class LeaderboardTest {
     }
 
     private void seed(String name, int rating, int gamesPlayed) {
-        User u = new User(name, name + "@example.com", "hash");
+        User u = new User(name, "hash");
         u.setEloRating(rating);
         u.setGamesPlayed(gamesPlayed);
         users.save(u);

@@ -77,7 +77,7 @@ class UserStatsTest {
         moves.deleteAll();
         games.deleteAll();
         users.deleteAll();
-        humanId = users.save(new User("human", "human@example.com", "hash")).getId();
+        humanId = users.save(new User("human", "hash")).getId();
     }
 
     @Test
@@ -107,15 +107,14 @@ class UserStatsTest {
     }
 
     @Test
-    void isPublicAndOmitsEmail() throws Exception {
+    void isPublicNoAuthRequired() throws Exception {
         playToTerminal();
 
         mockMvc.perform(get("/api/users/{id}/stats", humanId)) // no Authorization header
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("human"))
                 .andExpect(jsonPath("$.gamesPlayed").value(1))
-                .andExpect(jsonPath("$.ratingHistory.length()").value(1))
-                .andExpect(jsonPath("$.email").doesNotExist()); // PII not exposed on a public read
+                .andExpect(jsonPath("$.ratingHistory.length()").value(1));
     }
 
     @Test

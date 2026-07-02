@@ -58,8 +58,7 @@ class MoveAuthorizationHttpStatusTest {
     private String register(String username) throws Exception {
         HttpResponse<String> resp = post(
                 "/api/auth/register",
-                "{\"username\":\"" + username + "\",\"email\":\"" + username
-                        + "@example.com\",\"password\":\"correcthorse\"}",
+                "{\"username\":\"" + username + "\",\"password\":\"correcthorse\"}",
                 null);
         return objectMapper.readTree(resp.body()).get("token").asText();
     }

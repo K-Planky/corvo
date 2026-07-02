@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Registration use case (spec §5/§10): hash the password with BCrypt, persist the user, and issue a
- * JWT. Duplicate username/email is rejected with a {@link DuplicateRegistrationException} (409).
+ * JWT. A duplicate username is rejected with a {@link DuplicateRegistrationException} (409).
  */
 @Service
 public class AuthService {
@@ -44,17 +44,14 @@ public class AuthService {
         if (users.existsByUsername(request.username())) {
             throw new DuplicateRegistrationException("username already taken");
         }
-        if (users.existsByEmail(request.email())) {
-            throw new DuplicateRegistrationException("email already registered");
-        }
 
         String passwordHash = passwordEncoder.encode(request.password());
-        User user = new User(request.username(), request.email(), passwordHash);
+        User user = new User(request.username(), passwordHash);
         try {
             user = users.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {
             // Lost the race against a concurrent registration; the unique index rejected the insert.
-            throw new DuplicateRegistrationException("username or email already registered");
+            throw new DuplicateRegistrationException("username already registered");
         }
 
         return new AuthResponse(jwtService.issueToken(user), UserResponse.from(user));

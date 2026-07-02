@@ -71,7 +71,7 @@ class WebSocketConnectAuthTest {
                 .post()
                 .uri("http://localhost:" + port + "/api/auth/register")
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
-                .body("{\"username\":\"wsuser\",\"email\":\"wsuser@example.com\",\"password\":\"correcthorse\"}")
+                .body("{\"username\":\"wsuser\",\"password\":\"correcthorse\"}")
                 .retrieve()
                 .body(String.class);
         JsonNode auth = objectMapper.readTree(body);

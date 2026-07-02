@@ -52,9 +52,8 @@ class FlywayMigrationTest {
         assertThat(tableExists("moves")).isTrue();
         assertThat(tableExists("rating_history")).isTrue();
 
-        // Unique constraints: username + email unique; moveNumber unique per game.
+        // Unique constraints: username unique; moveNumber unique per game.
         assertThat(uniqueConstraintExists("uq_users_username")).isTrue();
-        assertThat(uniqueConstraintExists("uq_users_email")).isTrue();
         assertThat(uniqueConstraintExists("uq_moves_game_move_number")).isTrue();
 
         // gameId is indexed: the composite unique index leads with game_id, so it serves

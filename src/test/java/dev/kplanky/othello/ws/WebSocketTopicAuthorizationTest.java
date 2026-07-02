@@ -78,8 +78,8 @@ class WebSocketTopicAuthorizationTest {
         stompClient = new WebSocketStompClient(new StandardWebSocketClient());
         stompClient.setMessageConverter(new StringMessageConverter());
 
-        participantToken = register("participant", "participant@example.com");
-        outsiderToken = register("outsider", "outsider@example.com");
+        participantToken = register("participant");
+        outsiderToken = register("outsider");
 
         // The participant creates a vs-AI game, so they play one side and are the only human in it.
         String created = RestClient.create()
@@ -140,13 +140,12 @@ class WebSocketTopicAuthorizationTest {
         assertThat(errorLatch.await(5, TimeUnit.SECONDS)).isTrue();
     }
 
-    private String register(String username, String email) throws Exception {
+    private String register(String username) throws Exception {
         String body = RestClient.create()
                 .post()
                 .uri("http://localhost:" + port + "/api/auth/register")
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
-                .body("{\"username\":\"" + username + "\",\"email\":\"" + email
-                        + "\",\"password\":\"correcthorse\"}")
+                .body("{\"username\":\"" + username + "\",\"password\":\"correcthorse\"}")
                 .retrieve()
                 .body(String.class);
         JsonNode auth = objectMapper.readTree(body);

@@ -159,8 +159,7 @@ class GameMoveAuthorizationTest {
     private String register(String username) throws Exception {
         JsonNode auth = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"" + username + "\",\"email\":\"" + username
-                                + "@example.com\",\"password\":\"correcthorse\"}"))
+                        .content("{\"username\":\"" + username + "\",\"password\":\"correcthorse\"}"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString());

@@ -95,7 +95,7 @@ class GameAsyncAiReplyTest {
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 
         JsonNode auth = post("/api/auth/register", null,
-                "{\"username\":\"human\",\"email\":\"human@example.com\",\"password\":\"correcthorse\"}");
+                "{\"username\":\"human\",\"password\":\"correcthorse\"}");
         token = auth.get("token").asText();
         humanId = UUID.fromString(auth.get("user").get("id").asText());
     }

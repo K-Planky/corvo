@@ -69,7 +69,7 @@ class GameCreationTest {
         JsonNode auth = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(
-                                "{\"username\":\"player1\",\"email\":\"player1@example.com\",\"password\":\"correcthorse\"}"))
+                                "{\"username\":\"player1\",\"password\":\"correcthorse\"}"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString());

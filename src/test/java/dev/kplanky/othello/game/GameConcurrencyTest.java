@@ -79,7 +79,7 @@ class GameConcurrencyTest {
         games.deleteAll();
         users.deleteAll();
         tx = new TransactionTemplate(txManager);
-        humanId = users.save(new User("human", "human@example.com", "hash")).getId();
+        humanId = users.save(new User("human", "hash")).getId();
         // Human plays Black (bot White), so no bot opening move: the board is the engine initial
         // position and it's the human's turn.
         gameId = gameService.createVsAiGame(humanId, BotDifficulty.EASY, BotSide.WHITE).id();

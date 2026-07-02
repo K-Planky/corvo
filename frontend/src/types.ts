@@ -16,7 +16,6 @@ export type GameStatus =
 export interface User {
   id: string;
   username: string;
-  email: string;
   eloRating: number;
 }
 

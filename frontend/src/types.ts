@@ -24,6 +24,13 @@ export interface AuthResponse {
   user: User;
 }
 
+/** Result of joining the matchmaking queue (spec §9/§15). `MATCHED` means an opponent was already
+ *  waiting and this call created the game (`gameId` set); `QUEUED` means we're now waiting for one. */
+export interface MatchmakingStatus {
+  status: 'QUEUED' | 'MATCHED';
+  gameId: string | null;
+}
+
 export interface GameState {
   id: string;
   opponentType: string;

@@ -90,6 +90,11 @@ body {
   color: var(--muted);
 }
 
+.waiting {
+  margin: 0 0 1rem;
+  color: var(--muted);
+}
+
 .btn {
   appearance: none;
   border: 1px solid var(--line);

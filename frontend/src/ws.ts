@@ -6,7 +6,7 @@ import { Client, type IMessage } from '@stomp/stompjs';
 import { getToken } from './api';
 import type { GameState } from './types';
 
-export type GameEventType = 'MOVE_MADE' | 'GAME_OVER' | 'YOUR_TURN';
+export type GameEventType = 'MOVE_MADE' | 'GAME_OVER' | 'YOUR_TURN' | 'MATCH_FOUND';
 
 /** A server→client push: the event kind plus the full post-event state to re-render from. */
 export interface GameEvent {
@@ -45,6 +45,46 @@ export function subscribeToGame(
       client.subscribe('/user/queue/notifications', (msg) => deliver(msg, onEvent));
       if (connectedBefore) onReconnect?.();
       connectedBefore = true;
+    },
+  });
+  client.activate();
+  return {
+    close: () => {
+      void client.deactivate();
+    },
+  };
+}
+
+/**
+ * Connect and subscribe to the caller's personal queue only ({@code /user/queue/notifications}),
+ * with no game topic — used by the lobby to wait for a {@code MATCH_FOUND} push before any game
+ * exists (spec §9/§15, M12.1). {@code onReady} fires on the first connect: the caller joins the
+ * matchmaking queue only once subscribed, so a pairing pushed right after joining can't be missed
+ * (the simple broker has no durable queue for an unsubscribed destination). A reconnect
+ * re-subscribes but does not re-fire {@code onReady} — a dropped socket doesn't remove the caller
+ * from the server-side queue, so re-joining would be wrong.
+ *
+ * <p>Known limitation (same non-durable-broker class as the M9 single-instance note): if the socket
+ * is down at the instant the server pairs this caller, the {@code MATCH_FOUND} push is dropped and
+ * there is no queue-status endpoint to re-poll on reconnect, so the waiter can miss its match. The
+ * grace/turn-clock forfeit bounds the fallout; a durable broker or a "my pending match" query would
+ * close it (revisit with the PvP reconnect work in M12.2).
+ */
+export function subscribeToNotifications(
+  onEvent: (event: GameEvent) => void,
+  onReady?: () => void,
+): GameSubscription {
+  let readyFired = false;
+  const client = new Client({
+    brokerURL: socketUrl(),
+    connectHeaders: { Authorization: `Bearer ${getToken() ?? ''}` },
+    reconnectDelay: 2000,
+    onConnect: () => {
+      client.subscribe('/user/queue/notifications', (msg) => deliver(msg, onEvent));
+      if (!readyFired) {
+        readyFired = true;
+        onReady?.();
+      }
     },
   });
   client.activate();

@@ -6,6 +6,7 @@ import type {
   Difficulty,
   GameState,
   BotSide,
+  MatchmakingStatus,
   User,
 } from './types';
 
@@ -141,6 +142,18 @@ export function getGame(id: string): Promise<GameState> {
 export function listGames(status?: string): Promise<GameState[]> {
   const query = status ? `?status=${status}` : '';
   return request<GameState[]>(`/games${query}`);
+}
+
+/** Join the matchmaking queue (spec §9/§15). Pairs immediately with a waiting player when one is
+ *  present (`MATCHED` + `gameId`); otherwise enqueues the caller (`QUEUED`). Either way, a paired
+ *  player also gets a `MATCH_FOUND` push on their personal queue (see ws.ts). */
+export function joinQueue(): Promise<MatchmakingStatus> {
+  return request<MatchmakingStatus>('/matchmaking/queue', { method: 'POST' });
+}
+
+/** Leave the matchmaking queue. Idempotent server-side — safe to call even if not currently queued. */
+export function leaveQueue(): Promise<void> {
+  return request<void>('/matchmaking/queue', { method: 'DELETE' });
 }
 
 /** Submit a placement (`position`) or a pass. Returns the state after the human's move only; the

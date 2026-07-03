@@ -25,6 +25,10 @@ import java.util.UUID;
  * full board sets bits past 2^53 (any disc on rank 8), so they can't be read losslessly as JSON
  * numbers in JavaScript — the client renders from {@code cells} instead and never touches the
  * bitboards.
+ *
+ * <p>{@code blackTimeRemainingMs}/{@code whiteTimeRemainingMs} are each side's live time bank in
+ * milliseconds (spec §15, M10): the side to move counts down from now, the idle side is frozen.
+ * Both are {@code null} for an unclocked (vs-AI) game — the client shows a clock only when present.
  */
 public record GameStateResponse(
         UUID id,
@@ -42,9 +46,17 @@ public record GameStateResponse(
         int moveCount,
         int blackDiscs,
         int whiteDiscs,
-        List<Integer> legalMoves) {
+        List<Integer> legalMoves,
+        Long blackTimeRemainingMs,
+        Long whiteTimeRemainingMs) {
 
+    /** Builds a state view with no turn-clock (used by unclocked vs-AI paths and any legacy caller). */
     public static GameStateResponse of(Game game, List<Integer> legalMoves) {
+        return of(game, legalMoves, null, null);
+    }
+
+    public static GameStateResponse of(
+            Game game, List<Integer> legalMoves, Long blackTimeRemainingMs, Long whiteTimeRemainingMs) {
         return new GameStateResponse(
                 game.getId(),
                 game.getOpponentType(),
@@ -61,7 +73,9 @@ public record GameStateResponse(
                 game.getMoveCount(),
                 Long.bitCount(game.getBoardBlack()),
                 Long.bitCount(game.getBoardWhite()),
-                List.copyOf(legalMoves));
+                List.copyOf(legalMoves),
+                blackTimeRemainingMs,
+                whiteTimeRemainingMs);
     }
 
     /** Flattens the two bitboards into a 64-char {@code B}/{@code W}/{@code .} string, index = square. */

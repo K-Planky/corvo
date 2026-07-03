@@ -517,9 +517,17 @@ public class GameService {
         return side == Player.BLACK ? game.getBlackPlayerId() : game.getWhitePlayerId();
     }
 
-    /** Builds the state view for {@code callerId}, including the moves they may currently play. */
+    /**
+     * Builds the state view for {@code callerId}, including the moves they may currently play and — for
+     * a clocked PvP game — each side's live remaining time (§15). Remaining is {@code null} on an
+     * unclocked (vs-AI) game.
+     */
     private GameStateResponse toResponse(Game game, UUID callerId) {
-        return GameStateResponse.of(game, legalMovesFor(game, callerId));
+        return GameStateResponse.of(
+                game,
+                legalMovesFor(game, callerId),
+                effectiveRemainingMs(game, Player.BLACK),
+                effectiveRemainingMs(game, Player.WHITE));
     }
 
     /**

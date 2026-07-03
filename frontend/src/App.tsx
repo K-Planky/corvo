@@ -48,6 +48,7 @@ export default function App() {
         <GameView
           key={game.id}
           initial={game}
+          user={user}
           onExit={() => {
             setGame(null);
             // A finished game changed our Elo server-side; re-read it so the lobby shows the new

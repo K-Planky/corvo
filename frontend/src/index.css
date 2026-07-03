@@ -372,6 +372,20 @@ body {
   color: var(--muted);
 }
 
+/* PvP turn clock (M10): sits to the right of the disc count, tabular so digits don't jitter as they
+   tick. `margin-left: auto` right-aligns it; a following .score-you (also auto) then trails it. */
+.score-clock {
+  margin-left: auto;
+  font-size: calc(var(--play) * 0.032);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.score-clock-low {
+  color: var(--danger);
+}
+
 .banner {
   margin: 0;
   display: flex;
@@ -422,6 +436,14 @@ body {
 .banner-draw {
   color: var(--gold);
   border-color: rgba(241, 196, 83, 0.4);
+}
+
+/* PvP opponent-disconnect notice (M11.2): a muted amber strip shown above the board during the grace
+   window; the board stays interactive (the clock keeps running). */
+.banner-warn {
+  color: var(--gold);
+  border-color: rgba(241, 196, 83, 0.4);
+  background: rgba(241, 196, 83, 0.08);
 }
 
 /* ---- board ---- */

@@ -36,8 +36,9 @@ export interface GameState {
   opponentType: string;
   blackPlayerId: string | null;
   whitePlayerId: string | null;
-  botSide: BotSide;
-  botDifficulty: Difficulty;
+  // Null for a human-vs-human game (no bot); set only for HUMAN_VS_AI.
+  botSide: BotSide | null;
+  botDifficulty: Difficulty | null;
   // `cells` is the render-ready board: 64 chars indexed row*8+col, each 'B' | 'W' | '.'. We read
   // this rather than the raw bitboards, which can't survive JSON's 53-bit number precision.
   cells: string;
@@ -48,6 +49,31 @@ export interface GameState {
   blackDiscs: number;
   whiteDiscs: number;
   legalMoves: number[];
+  // Each side's remaining turn-clock bank in ms (spec §15, M10): side to move counts down, idle side
+  // frozen. Both null for an unclocked vs-AI game ⇒ the client shows no clock.
+  blackTimeRemainingMs: number | null;
+  whiteTimeRemainingMs: number | null;
+}
+
+/** One point on a user's rating timeline (mirrors the server `RatingHistoryEntry`, spec §8/§9). */
+export interface RatingHistoryPoint {
+  gameId: string;
+  oldRating: number;
+  newRating: number;
+  delta: number;
+  createdAt: string;
+}
+
+/** Public per-user stats (mirrors the server `UserStatsResponse`, spec §9) — no email (PII). */
+export interface UserStats {
+  id: string;
+  username: string;
+  eloRating: number;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  ratingHistory: RatingHistoryPoint[];
 }
 
 /** True once the game has reached a terminal result. */
@@ -55,7 +81,16 @@ export function isOver(game: GameState): boolean {
   return game.status !== 'IN_PROGRESS';
 }
 
-/** The side the human plays — the side the bot does not. */
+/** The side the human plays — the side the bot does not (vs-AI only). */
 export function humanSide(game: GameState): Player {
   return game.botSide === 'BLACK' ? 'WHITE' : 'BLACK';
+}
+
+/** The side the signed-in viewer plays. In PvP it's derived from the player ids; in vs-AI it's the
+ *  non-bot side (the viewer is always the human). */
+export function viewerSide(game: GameState, userId: string): Player {
+  if (game.opponentType === 'HUMAN_VS_HUMAN') {
+    return game.blackPlayerId === userId ? 'BLACK' : 'WHITE';
+  }
+  return humanSide(game);
 }

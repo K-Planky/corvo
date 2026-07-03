@@ -2,16 +2,19 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import GameView, { STAGE_MS } from './GameView';
-import type { GameState } from './types';
+import type { GameState, User } from './types';
 import type { GameEvent } from './ws';
 
 // Mock the API boundary so the test exercises render + click → submit → re-render without a server.
 vi.mock('./api', () => ({
   submitMove: vi.fn(),
   getGame: vi.fn(),
+  getUserStats: vi.fn(),
   ApiError: class ApiError extends Error {},
 }));
 import { getGame, submitMove } from './api';
+
+const USER: User = { id: 'u1', username: 'me', eloRating: 1000 };
 
 // Mock the WebSocket boundary: capture the event callback so the test can simulate server pushes
 // (the bot's reply, game over) and assert the client re-renders from them; also capture onReconnect
@@ -56,6 +59,8 @@ const OPENING: GameState = {
   blackDiscs: 2,
   whiteDiscs: 2,
   legalMoves: [19, 26, 37, 44], // d3, c4, f5, e6
+  blackTimeRemainingMs: null, // vs-AI is unclocked
+  whiteTimeRemainingMs: null,
 };
 
 // State the move POST returns after Black plays d3 (19): the placement plus the flipped d4 (27). It
@@ -100,7 +105,7 @@ describe('GameView', () => {
   });
 
   it('renders the board from the cells string', () => {
-    const { container } = render(<GameView initial={OPENING} onExit={() => {}} />);
+    const { container } = render(<GameView initial={OPENING} user={USER} onExit={() => {}} />);
     // Scope to the board so the scoreboard's mini discs aren't counted.
     expect(container.querySelectorAll('.board .disc-black')).toHaveLength(2);
     expect(container.querySelectorAll('.board .disc-white')).toHaveLength(2);
@@ -109,7 +114,7 @@ describe('GameView', () => {
 
   it('submits a move, shows the bot thinking, then re-renders from the staged bot reply push', async () => {
     vi.mocked(submitMove).mockResolvedValue(AFTER_HUMAN_D3);
-    render(<GameView initial={OPENING} onExit={() => {}} />);
+    render(<GameView initial={OPENING} user={USER} onExit={() => {}} />);
 
     // d3 is square 19; the Board labels squares with their algebraic coordinate.
     await userEvent.click(screen.getByLabelText('d3'));
@@ -139,7 +144,7 @@ describe('GameView', () => {
     // human's own move. Hold the POST resolution so we can deliver the push first.
     let resolveMove!: (s: GameState) => void;
     vi.mocked(submitMove).mockReturnValue(new Promise<GameState>((res) => (resolveMove = res)));
-    render(<GameView initial={OPENING} onExit={() => {}} />);
+    render(<GameView initial={OPENING} user={USER} onExit={() => {}} />);
 
     await userEvent.click(screen.getByLabelText('d3'));
     await waitFor(() => expect(submitMove).toHaveBeenCalledWith('g1', { position: 19 }));
@@ -163,7 +168,7 @@ describe('GameView', () => {
   });
 
   it('renders the terminal result from a GAME_OVER push', async () => {
-    render(<GameView initial={OPENING} onExit={() => {}} />);
+    render(<GameView initial={OPENING} user={USER} onExit={() => {}} />);
 
     act(() =>
       pushEvent({
@@ -172,7 +177,10 @@ describe('GameView', () => {
       }),
     );
 
-    await waitFor(() => expect(screen.getByText(/you win/i)).toBeInTheDocument());
+    // vs-AI has no clocks/disconnect, so a terminal is never a forfeit even when it lands at an
+    // unchanged moveCount — the plain win copy, not "opponent forfeited".
+    await waitFor(() => expect(screen.getByText('You win! 🎉')).toBeInTheDocument());
+    expect(screen.queryByText(/forfeit/i)).not.toBeInTheDocument();
     expect(screen.getByText('40')).toBeInTheDocument(); // final disc count from the push
   });
 
@@ -181,7 +189,7 @@ describe('GameView', () => {
     // was down and its push missed. On reconnect the client re-GETs state — the board must catch up to
     // it purely from the fetch, no push involved (spec §15 reconnect: GET current state + re-subscribe).
     vi.mocked(getGame).mockResolvedValue(AFTER_BOT_REPLY);
-    render(<GameView initial={OPENING} onExit={() => {}} />);
+    render(<GameView initial={OPENING} user={USER} onExit={() => {}} />);
     expect(screen.getAllByText('2')).toHaveLength(2); // opening board before reconnect
 
     await act(async () => reconnect());
@@ -195,7 +203,7 @@ describe('GameView', () => {
 
   it('offers a Pass action when the human has no legal move', () => {
     const stuck: GameState = { ...OPENING, legalMoves: [] };
-    render(<GameView initial={stuck} onExit={() => {}} />);
+    render(<GameView initial={stuck} user={USER} onExit={() => {}} />);
     expect(screen.getByRole('button', { name: /pass/i })).toBeInTheDocument();
   });
 
@@ -207,7 +215,7 @@ describe('GameView', () => {
       blackDiscs: 40,
       whiteDiscs: 24,
     };
-    render(<GameView initial={won} onExit={() => {}} />);
+    render(<GameView initial={won} user={USER} onExit={() => {}} />);
     expect(screen.getByText(/you win/i)).toBeInTheDocument();
   });
 });

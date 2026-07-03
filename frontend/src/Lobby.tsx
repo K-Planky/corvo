@@ -233,7 +233,8 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
               <li key={g.id}>
                 <button type="button" className="game-row" onClick={() => resume(g.id)}>
                   <span>
-                    vs {g.botDifficulty} bot · move {g.moveCount}
+                    {g.opponentType === 'HUMAN_VS_HUMAN' ? 'vs opponent' : `vs ${g.botDifficulty} bot`} ·
+                    move {g.moveCount}
                   </span>
                   <span className="score-mini">
                     {g.blackDiscs}–{g.whiteDiscs}

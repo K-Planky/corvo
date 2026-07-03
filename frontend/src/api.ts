@@ -8,6 +8,7 @@ import type {
   BotSide,
   MatchmakingStatus,
   User,
+  UserStats,
 } from './types';
 
 const TOKEN_KEY = 'othello.token';
@@ -142,6 +143,12 @@ export function getGame(id: string): Promise<GameState> {
 export function listGames(status?: string): Promise<GameState[]> {
   const query = status ? `?status=${status}` : '';
   return request<GameState[]>(`/games${query}`);
+}
+
+/** Public per-user stats (spec §9): current rating + W/L/D + rating history. Used to label a PvP
+ *  opponent by username and by the stats/leaderboard read UIs. Auth optional server-side. */
+export function getUserStats(id: string): Promise<UserStats> {
+  return request<UserStats>(`/users/${id}/stats`);
 }
 
 /** Join the matchmaking queue (spec §9/§15). Pairs immediately with a waiting player when one is

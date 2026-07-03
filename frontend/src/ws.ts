@@ -6,7 +6,13 @@ import { Client, type IMessage } from '@stomp/stompjs';
 import { getToken } from './api';
 import type { GameState } from './types';
 
-export type GameEventType = 'MOVE_MADE' | 'GAME_OVER' | 'YOUR_TURN' | 'MATCH_FOUND';
+export type GameEventType =
+  | 'MOVE_MADE'
+  | 'GAME_OVER'
+  | 'YOUR_TURN'
+  | 'MATCH_FOUND'
+  | 'OPPONENT_DISCONNECTED'
+  | 'OPPONENT_RECONNECTED';
 
 /** A server→client push: the event kind plus the full post-event state to re-render from. */
 export interface GameEvent {

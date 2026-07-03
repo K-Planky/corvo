@@ -8,19 +8,25 @@ import type { GameEvent } from './ws';
 // Mock the API boundary so the test exercises render + click → submit → re-render without a server.
 vi.mock('./api', () => ({
   submitMove: vi.fn(),
+  getGame: vi.fn(),
   ApiError: class ApiError extends Error {},
 }));
-import { submitMove } from './api';
+import { getGame, submitMove } from './api';
 
 // Mock the WebSocket boundary: capture the event callback so the test can simulate server pushes
-// (the bot's reply, game over) and assert the client re-renders from them.
+// (the bot's reply, game over) and assert the client re-renders from them; also capture onReconnect
+// so a socket reconnect (which re-GETs authoritative state) can be simulated.
 let pushEvent: (event: GameEvent) => void = () => {};
+let reconnect: () => void = () => {};
 const closeSub = vi.fn();
 vi.mock('./ws', () => ({
-  subscribeToGame: vi.fn((_gameId: string, onEvent: (event: GameEvent) => void) => {
-    pushEvent = onEvent;
-    return { close: closeSub };
-  }),
+  subscribeToGame: vi.fn(
+    (_gameId: string, onEvent: (event: GameEvent) => void, onReconnect?: () => void) => {
+      pushEvent = onEvent;
+      reconnect = onReconnect ?? (() => {});
+      return { close: closeSub };
+    },
+  ),
 }));
 
 // '.' x 64 with the four centre discs of the opening position set (index = row*8+col).
@@ -88,7 +94,9 @@ const AFTER_BOT_REPLY: GameState = {
 describe('GameView', () => {
   beforeEach(() => {
     vi.mocked(submitMove).mockReset();
+    vi.mocked(getGame).mockReset();
     pushEvent = () => {};
+    reconnect = () => {};
   });
 
   it('renders the board from the cells string', () => {
@@ -166,6 +174,23 @@ describe('GameView', () => {
 
     await waitFor(() => expect(screen.getByText(/you win/i)).toBeInTheDocument());
     expect(screen.getByText('40')).toBeInTheDocument(); // final disc count from the push
+  });
+
+  it('re-GETs authoritative state on a socket reconnect, catching a move missed during the gap', async () => {
+    // The socket dropped and reconnected; a move (the bot's reply, moveCount 2) was applied while it
+    // was down and its push missed. On reconnect the client re-GETs state — the board must catch up to
+    // it purely from the fetch, no push involved (spec §15 reconnect: GET current state + re-subscribe).
+    vi.mocked(getGame).mockResolvedValue(AFTER_BOT_REPLY);
+    render(<GameView initial={OPENING} onExit={() => {}} />);
+    expect(screen.getAllByText('2')).toHaveLength(2); // opening board before reconnect
+
+    await act(async () => reconnect());
+
+    await waitFor(() => expect(getGame).toHaveBeenCalledWith('g1'));
+    // Both scores read 3 (AFTER_BOT_REPLY) — the board caught up from the re-fetch, and it's the
+    // human's turn again, all from GET rather than a push.
+    await waitFor(() => expect(screen.getByText('Your move')).toBeInTheDocument());
+    expect(screen.getAllByText('3')).toHaveLength(2);
   });
 
   it('offers a Pass action when the human has no legal move', () => {

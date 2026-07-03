@@ -23,8 +23,19 @@ export interface GameSubscription {
  * Connect and subscribe to a game's live events: the per-game topic ({@code MOVE_MADE}/{@code
  * GAME_OVER}) and the personal queue ({@code YOUR_TURN}). Every event carries the latest state, so the
  * caller just re-renders from {@code event.state}. The client auto-reconnects on a dropped socket.
+ *
+ * <p>{@code onReconnect} fires on every connect <em>after</em> the first (spec §15, M11): a move may
+ * have been applied while the socket was down and its push missed, so the caller re-`GET`s
+ * authoritative state to catch up — the board is server-authoritative, so a returning client just
+ * re-fetches and re-subscribes (no client resync). The first connect needs no fetch: the mount already
+ * loaded state.
  */
-export function subscribeToGame(gameId: string, onEvent: (event: GameEvent) => void): GameSubscription {
+export function subscribeToGame(
+  gameId: string,
+  onEvent: (event: GameEvent) => void,
+  onReconnect?: () => void,
+): GameSubscription {
+  let connectedBefore = false;
   const client = new Client({
     brokerURL: socketUrl(),
     connectHeaders: { Authorization: `Bearer ${getToken() ?? ''}` },
@@ -32,6 +43,8 @@ export function subscribeToGame(gameId: string, onEvent: (event: GameEvent) => v
     onConnect: () => {
       client.subscribe(`/topic/games/${gameId}`, (msg) => deliver(msg, onEvent));
       client.subscribe('/user/queue/notifications', (msg) => deliver(msg, onEvent));
+      if (connectedBefore) onReconnect?.();
+      connectedBefore = true;
     },
   });
   client.activate();

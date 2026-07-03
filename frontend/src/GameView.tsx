@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Board from './Board';
-import { ApiError, submitMove } from './api';
+import { ApiError, getGame, submitMove } from './api';
 import { subscribeToGame } from './ws';
 import { humanSide, isOver, type GameState, type Player } from './types';
 
@@ -119,22 +119,36 @@ export default function GameView({ initial, onExit }: GameViewProps) {
   // It's the bot's turn and not over ⇒ the server is computing the reply it will push to us.
   const botThinking = !over && !yourTurn;
 
-  // Re-render live from server pushes: the bot's reply (MOVE_MADE) and the terminal result
-  // (GAME_OVER) arrive here rather than in the move POST's response. Re-subscribe per game id. While a
-  // human move is in flight we hold the latest push (keeping the higher moveCount) so it can't be
-  // shown ahead of the human-move state the POST will return — see moveInFlight/play().
-  useEffect(() => {
-    const sub = subscribeToGame(initial.id, (event) => {
+  // Apply a server state (from a push or a reconnect re-fetch): while a human move is in flight, hold
+  // the latest (keeping the higher moveCount) so it can't be shown ahead of the human-move state the
+  // POST will return — see moveInFlight/play(); otherwise enqueue it for display.
+  const applyIncoming = useCallback(
+    (state: GameState) => {
       if (moveInFlight.current) {
-        if (!heldPush.current || event.state.moveCount >= heldPush.current.moveCount) {
-          heldPush.current = event.state;
+        if (!heldPush.current || state.moveCount >= heldPush.current.moveCount) {
+          heldPush.current = state;
         }
       } else {
-        showState(event.state);
+        showState(state);
       }
-    });
+    },
+    [showState],
+  );
+
+  // Re-render live from server pushes: the bot's reply (MOVE_MADE) and the terminal result
+  // (GAME_OVER) arrive here rather than in the move POST's response. Re-subscribe per game id. On a
+  // socket reconnect (M11), re-GET authoritative state so a move applied during the gap — whose push
+  // we missed — is caught; showState drops stale/duplicate moveCounts, so a no-op reconnect is safe.
+  useEffect(() => {
+    const sub = subscribeToGame(
+      initial.id,
+      (event) => applyIncoming(event.state),
+      () => {
+        void getGame(initial.id).then(applyIncoming).catch(() => {});
+      },
+    );
     return () => sub.close();
-  }, [initial.id, showState]);
+  }, [initial.id, applyIncoming]);
 
   async function play(move: { position: number } | { pass: true }) {
     if (busy) return;

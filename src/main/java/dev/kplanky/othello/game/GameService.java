@@ -257,6 +257,34 @@ public class GameService {
     }
 
     /**
+     * Forfeits {@code gameId} against {@code offenderUserId} because their WebSocket dropped and the
+     * disconnect grace period lapsed without a reconnect (spec §15, M11.2) — called per game by the
+     * disconnect sweep. Unlike a turn-clock timeout the offender is identified by user id, not the
+     * side-to-move: a disconnect forfeits regardless of whose turn it is. Re-reads and re-checks inside
+     * this transaction so a game a concurrent move (or another sweep) already ended returns empty and is
+     * skipped; the resolution reuses the same {@link #forfeit} path as the clock, so the present player
+     * gets a rated win. {@code flush} surfaces a lost race with a concurrent move as an optimistic-lock
+     * failure that propagates out (see {@link #forfeitExpiredTurn}). Returns the terminal state to push
+     * as {@code GAME_OVER} when a forfeit happened, else empty.
+     */
+    @Transactional
+    public Optional<GameStateResponse> forfeitDisconnected(UUID gameId, UUID offenderUserId) {
+        Game game = games.findById(gameId).orElse(null);
+        if (game == null
+                || game.getOpponentType() != OpponentType.HUMAN_VS_HUMAN
+                || game.getStatus() != GameStatus.IN_PROGRESS) {
+            return Optional.empty();
+        }
+        Player offender = sideOf(game, offenderUserId);
+        if (offender == null) {
+            return Optional.empty(); // not a participant — nothing to forfeit
+        }
+        forfeit(game, offender);
+        games.flush();
+        return Optional.of(toResponse(game, null));
+    }
+
+    /**
      * Plans the async bot reply for {@code gameId} as seen by {@code humanId} (M8), read-only so the
      * search in {@link AiReplyService} runs outside a transaction. Returns {@link BotReplyPlan.GameOver}
      * when the human's move already ended the game, {@link BotReplyPlan.Reply} with the engine snapshot
@@ -447,10 +475,12 @@ public class GameService {
     }
 
     /**
-     * Forfeits the game against {@code offender} (spec §15, M10): a flag-fall is a competitive loss, so
-     * the opponent is awarded a rated win — {@code status} = the opponent's {@code *_WON}, {@code
-     * winnerId} = the opponent human, and symmetric Elo applied — reusing the terminal outcome path.
-     * ({@code ABANDONED} is reserved for M11's disconnect policy, not a timeout.)
+     * Forfeits the game against {@code offender} (spec §15): a flag-fall (M10 turn-clock timeout) or a
+     * lapsed disconnect grace (M11.2) is a competitive loss, so the opponent is awarded a rated win —
+     * {@code status} = the opponent's {@code *_WON}, {@code winnerId} = the opponent human, and
+     * symmetric Elo applied — reusing the terminal outcome path. Both forfeit causes resolve here so a
+     * player cannot escape a losing position by stalling or pulling the plug; {@code ABANDONED} stays
+     * unused (a no-contest status kept available for a future admin/void action).
      */
     private void forfeit(Game game, Player offender) {
         resolveOutcome(game, Optional.of(offender.opponent()));

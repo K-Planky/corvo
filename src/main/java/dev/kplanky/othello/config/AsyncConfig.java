@@ -20,12 +20,13 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * than letting work pile up without limit.
  *
  * <p>Also turns on {@code @Scheduled} ({@link EnableScheduling}) for the PvP turn-clock sweep (spec
- * §15, M10) and binds its {@code pvp.clock.*} configuration ({@link PvpClockProperties}).
+ * §15, M10) and the opponent-disconnect sweep (M11.2), and binds their {@code pvp.clock.*} /
+ * {@code pvp.disconnect.*} configuration ({@link PvpClockProperties} / {@link PvpDisconnectProperties}).
  */
 @Configuration
 @EnableAsync
 @EnableScheduling
-@EnableConfigurationProperties(PvpClockProperties.class)
+@EnableConfigurationProperties({PvpClockProperties.class, PvpDisconnectProperties.class})
 public class AsyncConfig implements AsyncConfigurer {
 
     private static final Logger log = LoggerFactory.getLogger(AsyncConfig.class);

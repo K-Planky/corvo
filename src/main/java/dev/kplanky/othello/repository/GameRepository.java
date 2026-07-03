@@ -38,4 +38,14 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
             + "and g.opponentType = dev.kplanky.othello.domain.OpponentType.HUMAN_VS_HUMAN "
             + "and g.turnStartedAt is not null")
     List<UUID> findActiveClockedPvpGameIds();
+
+    /**
+     * Ids of {@code userId}'s in-progress PvP games — the games a disconnect-grace timer is armed for
+     * when their WebSocket drops (spec §15, M11.2). Id-only so each is re-read and resolved in its own
+     * transaction, matching {@link #findActiveClockedPvpGameIds}.
+     */
+    @Query("select g.id from Game g where g.status = dev.kplanky.othello.domain.GameStatus.IN_PROGRESS "
+            + "and g.opponentType = dev.kplanky.othello.domain.OpponentType.HUMAN_VS_HUMAN "
+            + "and (g.blackPlayerId = :userId or g.whitePlayerId = :userId)")
+    List<UUID> findActivePvpGameIdsForUser(@Param("userId") UUID userId);
 }

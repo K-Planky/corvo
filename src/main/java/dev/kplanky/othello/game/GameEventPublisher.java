@@ -33,6 +33,23 @@ public class GameEventPublisher {
     }
 
     /**
+     * A participant's WebSocket dropped and a disconnect grace timer has started (spec §15, M11.2),
+     * broadcast to the game topic so the present player can surface an "opponent disconnected" overlay.
+     * {@code state} is the (unchanged) current position — the board did not move.
+     */
+    public void opponentDisconnected(UUID gameId, GameStateResponse state) {
+        broker.convertAndSend(GAME_TOPIC + gameId, GameEvent.opponentDisconnected(state));
+    }
+
+    /**
+     * A previously-disconnected participant returned within the grace period (spec §15, M11.2); the
+     * game resumes untouched. Broadcast to the game topic so the present player can clear the overlay.
+     */
+    public void opponentReconnected(UUID gameId, GameStateResponse state) {
+        broker.convertAndSend(GAME_TOPIC + gameId, GameEvent.opponentReconnected(state));
+    }
+
+    /**
      * A convenience nudge to {@code userId} that it is now their turn (spec §9), delivered on their
      * personal queue {@code /user/queue/notifications}. {@code state} is the same view as the topic
      * push, so the recipient can render from it directly. (Most useful for PvP — M9; in vs-AI the

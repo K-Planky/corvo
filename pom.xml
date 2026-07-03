@@ -163,6 +163,10 @@
                              never races the deterministic integration tests. TurnClockForfeitTest
                              drives TurnClockService.sweep() explicitly instead. -->
                         <pvp.clock.scheduler-enabled>false</pvp.clock.scheduler-enabled>
+                        <!-- Likewise disable the opponent-disconnect grace sweep suite-wide (M11.2);
+                             OpponentDisconnectPolicyTest drives DisconnectPolicyService.sweep()
+                             explicitly so no timer races it. -->
+                        <pvp.disconnect.scheduler-enabled>false</pvp.disconnect.scheduler-enabled>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

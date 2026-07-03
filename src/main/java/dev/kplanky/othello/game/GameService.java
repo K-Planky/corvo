@@ -7,6 +7,7 @@ import dev.kplanky.othello.domain.GameStatus;
 import dev.kplanky.othello.domain.Move;
 import dev.kplanky.othello.domain.OpponentType;
 import dev.kplanky.othello.config.BotProperties;
+import dev.kplanky.othello.config.PvpClockProperties;
 import dev.kplanky.othello.domain.RatingHistory;
 import dev.kplanky.othello.domain.User;
 import dev.kplanky.othello.engine.GameRules;
@@ -20,6 +21,8 @@ import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
 import dev.kplanky.othello.repository.RatingHistoryRepository;
 import dev.kplanky.othello.repository.UserRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,6 +52,7 @@ public class GameService {
     private final GameStateMapper mapper;
     private final ApplicationEventPublisher events;
     private final BotProperties botProperties;
+    private final PvpClockProperties clockProperties;
 
     public GameService(
             GameRepository games,
@@ -59,7 +63,8 @@ public class GameService {
             BotEngine botEngine,
             GameStateMapper mapper,
             ApplicationEventPublisher events,
-            BotProperties botProperties) {
+            BotProperties botProperties,
+            PvpClockProperties clockProperties) {
         this.games = games;
         this.moves = moves;
         this.users = users;
@@ -69,6 +74,7 @@ public class GameService {
         this.mapper = mapper;
         this.events = events;
         this.botProperties = botProperties;
+        this.clockProperties = clockProperties;
     }
 
     /**
@@ -128,6 +134,12 @@ public class GameService {
         game.setBlackPlayerId(aIsBlack ? playerA : playerB);
         game.setWhitePlayerId(aIsBlack ? playerB : playerA);
         mapper.writeState(game, rules.initialState());
+        // Seed both time banks and start Black's clock (Black moves first). PvP-only: vs-AI games leave
+        // these null and are never swept for a timeout (spec §15, M10).
+        long bank = clockProperties.initialMs();
+        game.setBlackTimeMs(bank);
+        game.setWhiteTimeMs(bank);
+        game.setTurnStartedAt(Instant.now());
         game = games.save(game);
         return game.getId();
     }
@@ -208,6 +220,40 @@ public class GameService {
                 : game.getBlackPlayerId();
         boolean terminal = game.getStatus() != GameStatus.IN_PROGRESS;
         return Optional.of(new PvpMovePush(opponentId, toResponse(game, opponentId), terminal));
+    }
+
+    /**
+     * Forfeits {@code gameId} if the side to move has run its time bank to zero (spec §15, M10) —
+     * called per game by the scheduled sweep. Re-reads and re-checks inside this transaction so a move
+     * that committed between the sweep's candidate scan and here (refreshing {@code turnStartedAt}) is
+     * seen and no false forfeit is issued. If a move instead wins the race with this write, {@code
+     * flush} throws {@link ObjectOptimisticLockingFailureException}, which is deliberately <em>not</em>
+     * caught here: swallowing it can't rescue the transaction (the persistence context is already
+     * rollback-only, so commit would fail with {@code UnexpectedRollbackException}). It propagates out
+     * so the transaction rolls back cleanly and {@link TurnClockService#sweep()} skips this one game —
+     * the same "let the lock exception leave the transaction" pattern the human move path uses.
+     * Returns the terminal state to push as {@code GAME_OVER} when a forfeit happened, else empty.
+     */
+    @Transactional
+    public Optional<GameStateResponse> forfeitExpiredTurn(UUID gameId) {
+        Game game = games.findById(gameId).orElse(null);
+        if (game == null
+                || game.getOpponentType() != OpponentType.HUMAN_VS_HUMAN
+                || game.getStatus() != GameStatus.IN_PROGRESS
+                || !isClocked(game)) {
+            return Optional.empty();
+        }
+        Player toMove = game.getCurrentTurn();
+        if (effectiveRemainingMs(game, toMove) > 0) {
+            return Optional.empty(); // still has time on their clock
+        }
+        forfeit(game, toMove);
+        // Surface a lost race now: if a move committed first, flush throws and the transaction rolls
+        // back (see the Javadoc); otherwise this persists the forfeit inside the transaction.
+        games.flush();
+        // GAME_OVER is a broadcast to the game topic, so orientation is irrelevant (the game has ended
+        // and legalMoves are empty for everyone).
+        return Optional.of(toResponse(game, null));
     }
 
     /**
@@ -346,6 +392,17 @@ public class GameService {
         OthelloState after = rules.applyMove(before, move); // throws on an illegal move/pass
         int moveNumber = game.getMoveCount() + 1;
 
+        // Server-authoritative turn clock (spec §15, M10): charge the mover the time their turn took and
+        // restart the clock for the side to move next. PvP-only — a vs-AI game has null banks (the
+        // opening move and bot replies must not touch clocks). A pass consumes time too (it flows here).
+        if (isClocked(game)) {
+            Instant now = Instant.now();
+            long elapsed = Duration.between(game.getTurnStartedAt(), now).toMillis();
+            long remaining = Math.max(0, bankFor(game, mover) - elapsed);
+            setBankFor(game, mover, remaining);
+            game.setTurnStartedAt(now);
+        }
+
         if (move.isPass()) {
             moves.save(Move.pass(game.getId(), moveNumber, mover));
         } else {
@@ -363,9 +420,18 @@ public class GameService {
         }
     }
 
-    /** Resolves a terminal game: sets {@code status}/{@code winnerId} and the humans' W/L/D counters. */
+    /** Resolves a terminal game by disc count (double-pass/full board): winner = higher disc count. */
     private void finish(Game game, OthelloState terminal) {
-        Optional<Player> winner = rules.winner(terminal);
+        resolveOutcome(game, rules.winner(terminal));
+    }
+
+    /**
+     * Applies a resolved outcome to {@code game}: sets {@code status}/{@code winnerId} from
+     * {@code winner} ({@link Optional#empty()} ⇒ draw) and updates both humans' W/L/D counters + Elo.
+     * Shared by {@link #finish} (winner from the board) and {@link #forfeit} (winner forced by a
+     * timeout), so both reach the identical rating path.
+     */
+    private void resolveOutcome(Game game, Optional<Player> winner) {
         game.setStatus(winner.map(GameService::wonStatus).orElse(GameStatus.DRAW));
         // winnerId is the winning *human*; null when a bot wins or it's a draw (§5, Appendix C A1).
         game.setWinnerId(winner.map(side -> playerId(game, side)).orElse(null));
@@ -378,6 +444,16 @@ public class GameService {
         int whiteOpponentRating = opponentRatingFor(game, Player.WHITE);
         recordResult(game, Player.BLACK, winner, blackOpponentRating);
         recordResult(game, Player.WHITE, winner, whiteOpponentRating);
+    }
+
+    /**
+     * Forfeits the game against {@code offender} (spec §15, M10): a flag-fall is a competitive loss, so
+     * the opponent is awarded a rated win — {@code status} = the opponent's {@code *_WON}, {@code
+     * winnerId} = the opponent human, and symmetric Elo applied — reusing the terminal outcome path.
+     * ({@code ABANDONED} is reserved for M11's disconnect policy, not a timeout.)
+     */
+    private void forfeit(Game game, Player offender) {
+        resolveOutcome(game, Optional.of(offender.opponent()));
     }
 
     /**
@@ -482,5 +558,43 @@ public class GameService {
             case WHITE -> Player.WHITE;
             case NONE -> null;
         };
+    }
+
+    /** Whether {@code game} runs a turn clock — true only once its banks/start have been seeded (PvP). */
+    static boolean isClocked(Game game) {
+        return game.getTurnStartedAt() != null
+                && game.getBlackTimeMs() != null
+                && game.getWhiteTimeMs() != null;
+    }
+
+    /**
+     * The live remaining bank in milliseconds for {@code side} (spec §15, M10). The side to move counts
+     * down from {@code turnStartedAt} (clamped at 0); the idle side's bank is frozen at its stored
+     * value. Returns {@code null} for an unclocked (vs-AI) game — callers surface that as "no clock".
+     */
+    Long effectiveRemainingMs(Game game, Player side) {
+        if (!isClocked(game)) {
+            return null;
+        }
+        long bank = bankFor(game, side);
+        if (game.getStatus() == GameStatus.IN_PROGRESS && side == game.getCurrentTurn()) {
+            long elapsed = Duration.between(game.getTurnStartedAt(), Instant.now()).toMillis();
+            return Math.max(0, bank - elapsed);
+        }
+        return bank;
+    }
+
+    /** The stored time bank for {@code side} (only meaningful on a clocked game). */
+    private static long bankFor(Game game, Player side) {
+        return side == Player.BLACK ? game.getBlackTimeMs() : game.getWhiteTimeMs();
+    }
+
+    /** Sets the stored time bank for {@code side}. */
+    private static void setBankFor(Game game, Player side, long ms) {
+        if (side == Player.BLACK) {
+            game.setBlackTimeMs(ms);
+        } else {
+            game.setWhiteTimeMs(ms);
+        }
     }
 }

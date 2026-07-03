@@ -5,10 +5,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.aop.interceptor.SimpleAsyncUncaughtExceptionHandler;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
@@ -16,9 +18,14 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * request thread (spec §9, M8). The pool is deliberately small with a bounded queue: a Hard search is
  * CPU-bound, so unbounded concurrency would thrash, and a bounded queue applies back-pressure rather
  * than letting work pile up without limit.
+ *
+ * <p>Also turns on {@code @Scheduled} ({@link EnableScheduling}) for the PvP turn-clock sweep (spec
+ * §15, M10) and binds its {@code pvp.clock.*} configuration ({@link PvpClockProperties}).
  */
 @Configuration
 @EnableAsync
+@EnableScheduling
+@EnableConfigurationProperties(PvpClockProperties.class)
 public class AsyncConfig implements AsyncConfigurer {
 
     private static final Logger log = LoggerFactory.getLogger(AsyncConfig.class);

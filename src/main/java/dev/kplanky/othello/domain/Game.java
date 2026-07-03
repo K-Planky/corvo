@@ -88,6 +88,25 @@ public class Game {
     @Column(name = "move_count", nullable = false)
     private int moveCount = 0;
 
+    /**
+     * Black's remaining time bank in milliseconds, as of the start of the current turn (spec §15,
+     * M10). Frozen while it is not Black's turn; the live remaining while Black is to move is
+     * {@code blackTimeMs - (now - turnStartedAt)}. {@code null} for vs-AI games (no clock).
+     */
+    @Column(name = "black_time_ms")
+    private Long blackTimeMs;
+
+    /** White's remaining time bank in milliseconds (see {@link #blackTimeMs}). {@code null} for vs-AI. */
+    @Column(name = "white_time_ms")
+    private Long whiteTimeMs;
+
+    /**
+     * When the current side-to-move's clock started ticking (spec §15, M10) — set at PvP creation and
+     * reset by every applied move. {@code null} for vs-AI games (which are never on a clock).
+     */
+    @Column(name = "turn_started_at")
+    private Instant turnStartedAt;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -209,6 +228,30 @@ public class Game {
 
     public void setMoveCount(int moveCount) {
         this.moveCount = moveCount;
+    }
+
+    public Long getBlackTimeMs() {
+        return blackTimeMs;
+    }
+
+    public void setBlackTimeMs(Long blackTimeMs) {
+        this.blackTimeMs = blackTimeMs;
+    }
+
+    public Long getWhiteTimeMs() {
+        return whiteTimeMs;
+    }
+
+    public void setWhiteTimeMs(Long whiteTimeMs) {
+        this.whiteTimeMs = whiteTimeMs;
+    }
+
+    public Instant getTurnStartedAt() {
+        return turnStartedAt;
+    }
+
+    public void setTurnStartedAt(Instant turnStartedAt) {
+        this.turnStartedAt = turnStartedAt;
     }
 
     public long getVersion() {

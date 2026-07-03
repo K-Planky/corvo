@@ -27,4 +27,15 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
     @Query("select count(g) > 0 from Game g where g.id = :gameId "
             + "and (g.blackPlayerId = :userId or g.whitePlayerId = :userId)")
     boolean isParticipant(@Param("gameId") UUID gameId, @Param("userId") UUID userId);
+
+    /**
+     * Ids of in-progress, clocked PvP games — the candidates the turn-clock sweep checks for a timeout
+     * (spec §15, M10). Id-only so the sweep re-reads each in its own transaction; {@code turnStartedAt
+     * is not null} excludes vs-AI (unclocked) games. At this project's single-instance scale scanning
+     * all active PvP games each tick is cheap; a persisted indexed deadline would be the scale upgrade.
+     */
+    @Query("select g.id from Game g where g.status = dev.kplanky.othello.domain.GameStatus.IN_PROGRESS "
+            + "and g.opponentType = dev.kplanky.othello.domain.OpponentType.HUMAN_VS_HUMAN "
+            + "and g.turnStartedAt is not null")
+    List<UUID> findActiveClockedPvpGameIds();
 }

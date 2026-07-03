@@ -159,6 +159,10 @@
                              covered by GameAsyncAiReplyTest, which opts back in via @TestPropertySource
                              (a separate, intentional context). -->
                         <bot.async-reply>false</bot.async-reply>
+                        <!-- Disable the PvP turn-clock background sweep suite-wide (M10) so a timer
+                             never races the deterministic integration tests. TurnClockForfeitTest
+                             drives TurnClockService.sweep() explicitly instead. -->
+                        <pvp.clock.scheduler-enabled>false</pvp.clock.scheduler-enabled>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

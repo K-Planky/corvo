@@ -7,12 +7,10 @@ import dev.kplanky.othello.domain.BotDifficulty;
 import dev.kplanky.othello.domain.BotSide;
 import dev.kplanky.othello.domain.Game;
 import dev.kplanky.othello.domain.GameStatus;
-import dev.kplanky.othello.domain.RatingHistory;
 import dev.kplanky.othello.domain.User;
 import dev.kplanky.othello.engine.GameRules;
 import dev.kplanky.othello.engine.othello.OthelloMove;
 import dev.kplanky.othello.engine.othello.OthelloState;
-import dev.kplanky.othello.rating.Elo;
 import dev.kplanky.othello.repository.GameRepository;
 import dev.kplanky.othello.repository.MoveRepository;
 import dev.kplanky.othello.repository.RatingHistoryRepository;
@@ -26,9 +24,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
 /**
- * M7.1 acceptance (spec §8): a terminal vs-AI game moves the human's Elo by the expected delta
- * against the bot's fixed rating, leaves the bot rating untouched, and writes a {@link RatingHistory}
- * row. The bot has no {@code User} row, so only the human's rating moves.
+ * Elo overhaul (spec §8): vs-AI games are unrated practice. A terminal vs-AI game ends and sets its
+ * status, but leaves no competitive trace — the human's Elo is unchanged, no {@link RatingHistory} row
+ * is written, and W/L/D / games-played stay zero. (PvP rating is covered by the WebSocket PvP tests.)
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -67,38 +65,25 @@ class GameEloTest {
     }
 
     @Test
-    void terminalVsAiGameMovesHumanEloAndWritesHistory() {
-        int botRating = BotDifficulty.MEDIUM.rating(); // 1500
-        // Human plays Black (bot White) so we can drive both sides deterministically via applyMove,
-        // bypassing the synchronous bot reply — the human is the only rated participant.
+    void terminalVsAiGameIsUnratedAndRecordsNothing() {
+        // Human plays Black (bot White) so we can drive both sides deterministically via applyMove.
         UUID gameId = gameService.createVsAiGame(humanId, BotDifficulty.MEDIUM, BotSide.WHITE).id();
 
         Game game = playToTerminal(gameId);
 
-        double score = switch (game.getStatus()) {
-            case BLACK_WON -> Elo.WIN; // human is Black
-            case WHITE_WON -> Elo.LOSS;
-            case DRAW -> Elo.DRAW;
-            default -> throw new AssertionError("game not terminal: " + game.getStatus());
-        };
-        int expected = Elo.updatedRating(1200, botRating, score);
+        // The game really finished (status set), but it's practice — nothing competitive was recorded.
+        assertThat(game.getStatus()).isNotEqualTo(GameStatus.IN_PROGRESS);
 
-        // The human's rating moved by exactly the Elo delta against the bot's fixed rating.
+        // Elo unchanged from the starting value; no rating history written.
         User human = users.findById(humanId).orElseThrow();
-        assertThat(human.getEloRating()).isEqualTo(expected);
+        assertThat(human.getEloRating()).isEqualTo(1200);
+        assertThat(ratings.findAll()).isEmpty();
 
-        // The bot rating is fixed: never updated (it's stored on the game, not on any User row).
-        assertThat(game.getBotRating()).isEqualTo(botRating);
-
-        // Exactly one RatingHistory row — for the human only — capturing the before/after/delta.
-        List<RatingHistory> history = ratings.findAll();
-        assertThat(history).hasSize(1);
-        RatingHistory rh = history.get(0);
-        assertThat(rh.getUserId()).isEqualTo(humanId);
-        assertThat(rh.getGameId()).isEqualTo(gameId);
-        assertThat(rh.getOldRating()).isEqualTo(1200);
-        assertThat(rh.getNewRating()).isEqualTo(expected);
-        assertThat(rh.getDelta()).isEqualTo(expected - 1200);
+        // W/L/D and games-played untouched — a bot game leaves no record.
+        assertThat(human.getGamesPlayed()).isZero();
+        assertThat(human.getWins()).isZero();
+        assertThat(human.getLosses()).isZero();
+        assertThat(human.getDraws()).isZero();
     }
 
     /** Drives both sides with the first legal move (pass only when forced) until the game ends. */

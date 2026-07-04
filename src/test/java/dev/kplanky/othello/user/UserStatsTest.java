@@ -70,6 +70,7 @@ class UserStatsTest {
     MockMvc mockMvc;
 
     private UUID humanId;
+    private UUID opponentId;
 
     @BeforeEach
     void setUp() {
@@ -78,13 +79,14 @@ class UserStatsTest {
         games.deleteAll();
         users.deleteAll();
         humanId = users.save(new User("human", "hash")).getId();
+        opponentId = users.save(new User("rival", "hash")).getId();
     }
 
     @Test
     void returnsCountersRatingAndOrderedHistory() {
-        // Two full vs-AI games → two terminal outcomes → two RatingHistory rows.
-        playToTerminal();
-        playToTerminal();
+        // Only PvP is rated (spec §8): two full PvP games → two terminal outcomes → two history rows.
+        playPvpToTerminal();
+        playPvpToTerminal();
 
         UserStatsResponse s = stats.statsFor(humanId);
         User human = users.findById(humanId).orElseThrow();
@@ -108,7 +110,7 @@ class UserStatsTest {
 
     @Test
     void isPublicNoAuthRequired() throws Exception {
-        playToTerminal();
+        playPvpToTerminal();
 
         mockMvc.perform(get("/api/users/{id}/stats", humanId)) // no Authorization header
                 .andExpect(status().isOk())
@@ -118,15 +120,36 @@ class UserStatsTest {
     }
 
     @Test
+    void vsAiGameLeavesStatsUntouched() {
+        // A bot game is unrated practice: it must not touch counters, rating, or history.
+        playVsAiToTerminal();
+
+        UserStatsResponse s = stats.statsFor(humanId);
+        assertThat(s.gamesPlayed()).isZero();
+        assertThat(s.wins() + s.losses() + s.draws()).isZero();
+        assertThat(s.eloRating()).isEqualTo(1200);
+        assertThat(s.ratingHistory()).isEmpty();
+    }
+
+    @Test
     void unknownUserIs404() throws Exception {
         UUID missing = UUID.randomUUID();
         assertThatThrownBy(() -> stats.statsFor(missing)).isInstanceOf(UserNotFoundException.class);
         mockMvc.perform(get("/api/users/{id}/stats", missing)).andExpect(status().isNotFound());
     }
 
-    /** Creates a vs-AI game (human Black) and plays both sides to a terminal via the apply pipeline. */
-    private void playToTerminal() {
-        UUID gameId = gameService.createVsAiGame(humanId, BotDifficulty.EASY, BotSide.WHITE).id();
+    /** Creates a rated PvP game between the two humans and plays it to a terminal via the pipeline. */
+    private void playPvpToTerminal() {
+        playToTerminal(gameService.createPvpGame(humanId, opponentId));
+    }
+
+    /** Creates an unrated vs-AI game (human Black) and plays it to a terminal. */
+    private void playVsAiToTerminal() {
+        playToTerminal(gameService.createVsAiGame(humanId, BotDifficulty.EASY, BotSide.WHITE).id());
+    }
+
+    /** Drives both sides with the first legal move (pass only when forced) until the game ends. */
+    private void playToTerminal(UUID gameId) {
         Game game = games.findById(gameId).orElseThrow();
         int guard = 0;
         while (game.getStatus() == GameStatus.IN_PROGRESS) {

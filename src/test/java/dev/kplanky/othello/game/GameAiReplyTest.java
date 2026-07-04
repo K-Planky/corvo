@@ -164,7 +164,8 @@ class GameAiReplyTest {
         }
 
         assertThat(game.getStatus()).isNotEqualTo(GameStatus.IN_PROGRESS);
-        assertThat(users.findById(humanId).orElseThrow().getGamesPlayed()).isEqualTo(1);
+        // vs-AI is unrated practice (§8): the game finishes but adds nothing to the human's record.
+        assertThat(users.findById(humanId).orElseThrow().getGamesPlayed()).isZero();
 
         // Replaying the recorded history from the initial position reproduces the stored board: the
         // bot's moves went through the same recorded pipeline as the human's.

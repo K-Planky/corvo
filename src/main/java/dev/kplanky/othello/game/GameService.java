@@ -478,20 +478,27 @@ public class GameService {
     }
 
     /**
-     * Applies a resolved outcome to {@code game}: sets {@code status}/{@code winnerId} from
-     * {@code winner} ({@link Optional#empty()} ⇒ draw) and updates both humans' W/L/D counters + Elo.
+     * Applies a resolved outcome to {@code game}: always sets {@code status}/{@code winnerId} from
+     * {@code winner} ({@link Optional#empty()} ⇒ draw), then records the competitive result — both
+     * players' W/L/D counters + symmetric Elo — <em>only for PvP</em>. A vs-AI game is unrated practice
+     * (§8): it ends and shows a result but leaves no competitive trace (no Elo, W/L/D, or games-played).
      * Shared by {@link #finish} (winner from the board) and {@link #forfeit} (winner forced by a
-     * timeout), so both reach the identical rating path.
+     * timeout — already PvP-only at its callers), so both reach the identical rating path.
      */
     private void resolveOutcome(Game game, Optional<Player> winner) {
         game.setStatus(winner.map(GameService::wonStatus).orElse(GameStatus.DRAW));
         // winnerId is the winning *human*; null when a bot wins or it's a draw (§5, Appendix C A1).
         game.setWinnerId(winner.map(side -> playerId(game, side)).orElse(null));
 
-        // Snapshot each side's opponent rating BEFORE either side's rating is updated, so a PvP
-        // symmetric update is order-independent (§8): otherwise WHITE would be scored against BLACK's
-        // already-updated rating (and their deltas wouldn't sum to zero). vs-AI is unaffected — the
-        // bot's rating is fixed and read from the game, and only the human side is recorded.
+        // Only PvP games are rated — a vs-AI game records nothing (§8). Return after status/winnerId so
+        // the practice game still finishes and displays its result.
+        if (game.getOpponentType() != OpponentType.HUMAN_VS_HUMAN) {
+            return;
+        }
+
+        // Snapshot each side's opponent rating BEFORE either side's rating is updated, so the symmetric
+        // update is order-independent (§8): otherwise WHITE would be scored against BLACK's
+        // already-updated rating (and their deltas wouldn't sum to zero). Both sides are human here.
         int blackOpponentRating = opponentRatingFor(game, Player.BLACK);
         int whiteOpponentRating = opponentRatingFor(game, Player.WHITE);
         recordResult(game, Player.BLACK, winner, blackOpponentRating);
@@ -512,8 +519,9 @@ public class GameService {
 
     /**
      * Updates the human on {@code side}: their denormalized W/L/D counters <em>and</em> their Elo
-     * rating (spec §5/§8), scored against {@code opponentRating} (snapshotted before any update). A
-     * no-op for the bot (null) side — the bot has no {@code User} row and its rating is fixed.
+     * rating (spec §5/§8), scored against {@code opponentRating} (snapshotted before any update). Only
+     * reached for PvP now (§8), where both sides are human; the null-userId guard is retained as
+     * defensive dead code (a rated game never has a bot side).
      */
     private void recordResult(Game game, Player side, Optional<Player> winner, int opponentRating) {
         UUID userId = playerId(game, side);
@@ -536,10 +544,9 @@ public class GameService {
     }
 
     /**
-     * Applies the Elo change for {@code user} from this terminal game and records it in
+     * Applies the Elo change for {@code user} from this terminal PvP game and records it in
      * {@link RatingHistory} for the stats/graph endpoint (spec §8/§9). {@code opponentRating} is the
-     * pre-game snapshot (the bot's fixed rating in a vs-AI game, or the other human's pre-update rating
-     * in PvP).
+     * other human's pre-update rating, snapshotted before either side moves.
      */
     private void updateRating(Game game, User user, int opponentRating, double score) {
         int oldRating = user.getEloRating();
@@ -549,10 +556,10 @@ public class GameService {
     }
 
     /**
-     * The rating the player on {@code side} is scored against. In a vs-AI game the opponent is the
-     * bot, whose fixed rating was captured on the game at creation (§8). In PvP it is the other human's
-     * rating — read here <em>before</em> any update (see {@link #finish}) so the symmetric update is
-     * order-independent.
+     * The rating the player on {@code side} is scored against — the other human's rating, read here
+     * <em>before</em> any update (see {@link #finish}) so the symmetric update is order-independent.
+     * Only PvP games are rated (§8), so the opponent is always a human; the {@code getBotRating}
+     * fallback is unreachable dead code kept for safety.
      */
     private int opponentRatingFor(Game game, Player side) {
         UUID opponentId = playerId(game, side.opponent());

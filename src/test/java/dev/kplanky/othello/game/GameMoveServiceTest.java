@@ -31,7 +31,8 @@ import org.springframework.context.annotation.Import;
 /**
  * M4.2 acceptance (spec §4/§9/§11): a single transactional move keeps the persisted board, the
  * {@link Move} row, and {@code moveCount} mutually consistent; driving a game to a terminal state
- * sets {@code status}/{@code winnerId} and the human's W/L/D counters (Elo deferred to M7).
+ * sets {@code status}/{@code winnerId}. vs-AI is unrated practice (§8), so a terminal bot game records
+ * no W/L/D or Elo — the competitive record is exercised by the PvP tests.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -103,7 +104,7 @@ class GameMoveServiceTest {
     }
 
     @Test
-    void playingToTerminalResolvesOutcomeAndHumanCounters() {
+    void playingVsAiToTerminalResolvesOutcomeButRecordsNoCompetitiveResult() {
         UUID gameId = gameService.createVsAiGame(humanId, BotDifficulty.EASY, BotSide.WHITE).id();
 
         // Drive both sides deterministically (first legal move; pass only when forced) through the
@@ -131,16 +132,11 @@ class GameMoveServiceTest {
             assertThat(game.getWinnerId()).isNull();
         }
 
-        // Exactly one of the human's W/L/D incremented, consistent with the outcome; gamesPlayed == 1.
+        // vs-AI is unrated practice (spec §8): the game resolves (status/winnerId above) but records no
+        // competitive result — W/L/D and games-played stay zero.
         User human = users.findById(humanId).orElseThrow();
-        assertThat(human.getGamesPlayed()).isEqualTo(1);
-        assertThat(human.getWins() + human.getLosses() + human.getDraws()).isEqualTo(1);
-        switch (game.getStatus()) {
-            case BLACK_WON -> assertThat(human.getWins()).isEqualTo(1);
-            case WHITE_WON -> assertThat(human.getLosses()).isEqualTo(1);
-            case DRAW -> assertThat(human.getDraws()).isEqualTo(1);
-            default -> throw new AssertionError("unexpected terminal status " + game.getStatus());
-        }
+        assertThat(human.getGamesPlayed()).isZero();
+        assertThat(human.getWins() + human.getLosses() + human.getDraws()).isZero();
 
         // Replay the recorded history from the initial position; it must reproduce the stored board.
         OthelloState replay = OthelloState.initial();
@@ -151,11 +147,11 @@ class GameMoveServiceTest {
         assertThat(replay.black()).isEqualTo(game.getBoardBlack());
         assertThat(replay.white()).isEqualTo(game.getBoardWhite());
 
-        // A move on the now-terminal game is refused (409) and must not re-resolve the counters.
+        // A move on the now-terminal game is refused (409); counters remain zero (practice, unrated).
         assertThatThrownBy(() -> gameService.applyMove(gameId, OthelloMove.pass()))
                 .isInstanceOf(GameNotInProgressException.class);
         User after = users.findById(humanId).orElseThrow();
-        assertThat(after.getGamesPlayed()).isEqualTo(1);
-        assertThat(after.getWins() + after.getLosses() + after.getDraws()).isEqualTo(1);
+        assertThat(after.getGamesPlayed()).isZero();
+        assertThat(after.getWins() + after.getLosses() + after.getDraws()).isZero();
     }
 }

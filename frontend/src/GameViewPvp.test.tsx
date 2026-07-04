@@ -170,6 +170,25 @@ describe('GameView (PvP)', () => {
     expect(screen.queryByText(/forfeit/i)).not.toBeInTheDocument();
   });
 
+  it('hides the ← Lobby exit during a live PvP match and restores an exit once it ends', async () => {
+    const live: GameState = { ...PVP, moveCount: 5 };
+    render(<GameView initial={live} user={USER} onExit={() => {}} />);
+
+    // Locked in: no lobby exit while the PvP game is in progress.
+    expect(screen.queryByRole('button', { name: /lobby/i })).not.toBeInTheDocument();
+
+    // A terminal state releases the player — an exit control returns.
+    act(() =>
+      pushEvent({
+        type: 'GAME_OVER',
+        state: { ...live, status: 'WHITE_WON', moveCount: 6, legalMoves: [] },
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /back to lobby/i })).toBeInTheDocument(),
+    );
+  });
+
   it('shows a disconnect notice on OPPONENT_DISCONNECTED and clears it on OPPONENT_RECONNECTED', async () => {
     render(<GameView initial={PVP} user={USER} onExit={() => {}} />);
     // Let the opponent-name fetch settle first so its state update doesn't fire outside act().

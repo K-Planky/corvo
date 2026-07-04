@@ -201,6 +201,11 @@ describe('GameView', () => {
     expect(screen.getAllByText('3')).toHaveLength(2);
   });
 
+  it('keeps the ← Lobby exit available for an in-progress vs-AI game (only PvP locks in)', () => {
+    render(<GameView initial={OPENING} user={USER} onExit={() => {}} />);
+    expect(screen.getByRole('button', { name: /lobby/i })).toBeInTheDocument();
+  });
+
   it('offers a Pass action when the human has no legal move', () => {
     const stuck: GameState = { ...OPENING, legalMoves: [] };
     render(<GameView initial={stuck} user={USER} onExit={() => {}} />);

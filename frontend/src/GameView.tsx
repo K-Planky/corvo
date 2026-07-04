@@ -264,9 +264,13 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
   return (
     <section className="game">
       <header className="game-bar">
-        <button type="button" className="link" onClick={onExit}>
-          ← Lobby
-        </button>
+        {/* No lobby exit while a PvP match is live — you're locked in until it finishes (M12.x).
+            vs-AI keeps the button, and once a PvP game is over it returns (over) so you can leave. */}
+        {!(pvp && !over) && (
+          <button type="button" className="link" onClick={onExit}>
+            ← Lobby
+          </button>
+        )}
         <span className="game-meta">
           You play {sideLabel(you)} ·{' '}
           {pvp ? `vs ${opponentName ?? 'Opponent'}` : `${game.botDifficulty} bot`}

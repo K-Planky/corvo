@@ -145,6 +145,12 @@ export function listGames(status?: string): Promise<GameState[]> {
   return request<GameState[]>(`/games${query}`);
 }
 
+/** Discard one of the caller's own in-progress single-player games (Resume list). The server rejects a
+ *  multiplayer or finished game (409) and a game the caller isn't in (403). */
+export function deleteGame(id: string): Promise<void> {
+  return request<void>(`/games/${id}`, { method: 'DELETE' });
+}
+
 /** Public per-user stats (spec §9): current rating + W/L/D + rating history. Used to label a PvP
  *  opponent by username and by the stats/leaderboard read UIs. Auth optional server-side. */
 export function getUserStats(id: string): Promise<UserStats> {

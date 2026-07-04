@@ -381,6 +381,30 @@ public class GameService {
     }
 
     /**
+     * Discards one of {@code callerId}'s own games from the Resume list. Deletion is deliberately
+     * narrow: only an in-progress {@code HUMAN_VS_AI} game the caller is seated in. A multiplayer match
+     * is rated and shared with an opponent (deleting it would wipe their live game with no forfeit/Elo
+     * handling); a finished game has {@code rating_history} rows and an already-applied Elo delta that a
+     * delete can't reverse. The child {@code moves} rows are cleared first, since their {@code game_id}
+     * FK has no {@code ON DELETE CASCADE}; an in-progress game has no {@code rating_history} yet.
+     */
+    @Transactional
+    public void deleteGame(UUID gameId, UUID callerId) {
+        Game game = games.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
+        if (sideOf(game, callerId) == null) {
+            throw new NotAGameParticipantException(game.getId());
+        }
+        if (game.getOpponentType() != OpponentType.HUMAN_VS_AI) {
+            throw new GameNotDeletableException(game.getId(), "a multiplayer match cannot be deleted");
+        }
+        if (game.getStatus() != GameStatus.IN_PROGRESS) {
+            throw new GameNotDeletableException(game.getId(), "a finished game cannot be deleted");
+        }
+        moves.deleteByGameId(gameId);
+        games.delete(game);
+    }
+
+    /**
      * Plays the bot's reply when it is due: a {@code HUMAN_VS_AI} game that is still in progress and
      * now on the bot's side. The bot makes exactly one move — its difficulty's chosen move, or a pass
      * when it has none — through {@link #applyToGame}. After the bot moves the turn returns to the

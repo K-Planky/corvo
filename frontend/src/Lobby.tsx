@@ -3,7 +3,7 @@
 // board view.
 
 import { useEffect, useRef, useState } from 'react';
-import { ApiError, createGame, getGame, joinQueue, leaveQueue, listGames } from './api';
+import { ApiError, createGame, deleteGame, getGame, joinQueue, leaveQueue, listGames } from './api';
 import { subscribeToNotifications, type GameSubscription } from './ws';
 import type { BotSide, Difficulty, GameState, User } from './types';
 
@@ -144,6 +144,18 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
     }
   }
 
+  // Discard a resumable game. Confirm first (a delete is unrecoverable), then drop it from the list
+  // locally — no re-fetch needed since we know exactly which row went.
+  async function remove(id: string) {
+    if (!window.confirm('Delete this match? This cannot be undone.')) return;
+    try {
+      await deleteGame(id);
+      setGames((gs) => gs.filter((g) => g.id !== id));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not delete that game.');
+    }
+  }
+
   return (
     <section className="lobby">
       <header className="topbar">
@@ -230,7 +242,7 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
           <h2>Resume</h2>
           <ul className="game-list">
             {games.map((g) => (
-              <li key={g.id}>
+              <li key={g.id} className="game-list-row">
                 <button type="button" className="game-row" onClick={() => resume(g.id)}>
                   <span>
                     {g.opponentType === 'HUMAN_VS_HUMAN' ? 'vs opponent' : `vs ${g.botDifficulty} bot`} ·
@@ -240,6 +252,18 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
                     {g.blackDiscs}–{g.whiteDiscs}
                   </span>
                 </button>
+                {/* Only single-player games are deletable — a multiplayer match is rated and shared
+                    with an opponent (and, being locked, never appears here anyway). */}
+                {g.opponentType === 'HUMAN_VS_AI' && (
+                  <button
+                    type="button"
+                    className="game-delete"
+                    aria-label="Delete match"
+                    onClick={() => remove(g.id)}
+                  >
+                    ✕
+                  </button>
+                )}
               </li>
             ))}
           </ul>

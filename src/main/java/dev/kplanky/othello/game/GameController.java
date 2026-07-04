@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -67,5 +68,15 @@ public class GameController {
             @AuthenticationPrincipal JwtPrincipal principal,
             @RequestParam(required = false) GameStatus status) {
         return gameService.listGames(principal.userId(), status);
+    }
+
+    /**
+     * Discards one of the caller's own in-progress single-player games (Resume list, M12.x). Rejects a
+     * game the caller isn't in (403), a multiplayer or finished game (409), or an unknown id (404).
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable UUID id) {
+        gameService.deleteGame(id, principal.userId());
     }
 }

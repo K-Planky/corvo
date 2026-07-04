@@ -287,8 +287,15 @@ body {
   gap: 0.5rem;
 }
 
+.game-list-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
 .game-row {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -303,6 +310,23 @@ body {
 
 .game-row:hover {
   background: #2b3947;
+}
+
+/* Low-emphasis destructive action sitting beside a resume row. */
+.game-delete {
+  flex: none;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 0 0.7rem;
+}
+
+.game-delete:hover {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .score-mini {

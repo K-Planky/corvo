@@ -10,12 +10,13 @@ import type { GameEvent } from './ws';
 vi.mock('./api', () => ({
   createGame: vi.fn(),
   getGame: vi.fn(),
+  deleteGame: vi.fn(),
   joinQueue: vi.fn(),
   leaveQueue: vi.fn(),
   listGames: vi.fn(),
   ApiError: class ApiError extends Error {},
 }));
-import { getGame, joinQueue, leaveQueue, listGames } from './api';
+import { deleteGame, getGame, joinQueue, leaveQueue, listGames } from './api';
 
 // Mock the WS boundary: capture the event + onReady callbacks so the test can fire the "subscribed"
 // signal (which triggers the queue join) and simulate a MATCH_FOUND push.
@@ -51,6 +52,10 @@ function makeGame(id: string): GameState {
     whiteDiscs: 2,
     legalMoves: [],
   };
+}
+
+function makeAiGame(id: string): GameState {
+  return { ...makeGame(id), opponentType: 'HUMAN_VS_AI', whitePlayerId: null };
 }
 
 beforeEach(() => {
@@ -178,5 +183,47 @@ describe('Lobby matchmaking', () => {
 
     unmount();
     await waitFor(() => expect(leaveQueue).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('Lobby Resume — delete', () => {
+  it('deletes a single-player game after confirmation and removes its row', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(listGames).mockResolvedValue([makeAiGame('g1')]);
+    vi.mocked(deleteGame).mockResolvedValue(undefined);
+    render(<Lobby user={USER} onOpenGame={vi.fn()} onLogout={vi.fn()} />);
+
+    const del = await screen.findByRole('button', { name: /delete match/i });
+    await userEvent.click(del);
+
+    expect(confirm).toHaveBeenCalled();
+    await waitFor(() => expect(deleteGame).toHaveBeenCalledWith('g1'));
+    // The row is gone — with no games left, the Resume card disappears too.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /delete match/i })).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Resume')).not.toBeInTheDocument();
+  });
+
+  it('does nothing when the user cancels the confirmation', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    vi.mocked(listGames).mockResolvedValue([makeAiGame('g1')]);
+    render(<Lobby user={USER} onOpenGame={vi.fn()} onLogout={vi.fn()} />);
+
+    const del = await screen.findByRole('button', { name: /delete match/i });
+    await userEvent.click(del);
+
+    expect(confirm).toHaveBeenCalled();
+    expect(deleteGame).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /delete match/i })).toBeInTheDocument();
+  });
+
+  it('offers no delete control for a multiplayer game', async () => {
+    vi.mocked(listGames).mockResolvedValue([makeGame('pvp1')]); // HUMAN_VS_HUMAN
+    render(<Lobby user={USER} onOpenGame={vi.fn()} onLogout={vi.fn()} />);
+
+    // The resume row renders, but there is no delete affordance for a PvP match.
+    await screen.findByText(/vs opponent/i);
+    expect(screen.queryByRole('button', { name: /delete match/i })).not.toBeInTheDocument();
   });
 });

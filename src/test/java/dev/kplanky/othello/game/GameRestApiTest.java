@@ -1,5 +1,6 @@
 package dev.kplanky.othello.game;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.hamcrest.Matchers.hasLength;
@@ -141,6 +142,55 @@ class GameRestApiTest {
         mockMvc.perform(authed(get("/api/games").param("status", "BLACK_WON")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void deleteInProgressGameThenItIsGone() throws Exception {
+        String created = mockMvc.perform(authed(post("/api/games"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"difficulty\":\"EASY\",\"botSide\":\"WHITE\"}"))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String gameId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(authed(delete("/api/games/" + gameId))).andExpect(status().isNoContent());
+        // Really deleted server-side: a subsequent GET 404s.
+        mockMvc.perform(authed(get("/api/games/" + gameId))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteUnknownGameIsNotFound() throws Exception {
+        mockMvc.perform(authed(delete("/api/games/" + java.util.UUID.randomUUID())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void cannotDeleteAnotherUsersGame() throws Exception {
+        // A second player owns a game; player1's token must not be able to delete it (403).
+        JsonNode auth2 = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"player2\",\"password\":\"correcthorse\"}"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString());
+        String token2 = auth2.get("token").asText();
+        String created = mockMvc.perform(post("/api/games")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"difficulty\":\"EASY\",\"botSide\":\"WHITE\"}"))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String otherGameId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(authed(delete("/api/games/" + otherGameId))).andExpect(status().isForbidden());
+        // Untouched: the owner can still fetch it.
+        mockMvc.perform(get("/api/games/" + otherGameId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token2))
+                .andExpect(status().isOk());
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder authed(

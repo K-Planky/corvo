@@ -140,6 +140,23 @@ class IterativeDeepeningSearchTest {
         assertThat(checked).isGreaterThan(100);
     }
 
+    // --- The production depth cap is a strength ceiling, not just an endgame guard --------------
+
+    @Test
+    void theProductionDepthCapStopsDeepeningDespiteAGenerousBudget() {
+        OthelloState initial = rules.initialState();
+        int cap = 2;
+
+        var search = new IterativeDeepeningSearch<>(rules, evaluator, ordering, Duration.ofSeconds(30), cap);
+        var progress = search.deepen(initial);
+
+        // A 30 s budget would deepen far past 2 on the opening position; the cap must stop it first.
+        assertThat(progress.completedDepth()).isEqualTo(cap);
+        assertThat(rules.getLegalMoves(initial)).contains(progress.move());
+        assertThat(search.maxDepth()).isEqualTo(cap);
+        assertThat(search.budget()).isEqualTo(Duration.ofSeconds(30));
+    }
+
     // --- Real wall-clock budget is respected within tolerance -----------------------------------
 
     @Test

@@ -42,14 +42,27 @@ public final class IterativeDeepeningSearch<S, M> implements Search<S, M> {
     public record Progress<M>(M move, int completedDepth) {}
 
     /**
-     * @param budget   wall-clock time budget per move (Easy/Medium/Hard map to ~0.4 s / ~1.5 s /
-     *                 ~4 s in the difficulty task, M6.6); must be positive.
+     * @param budget   wall-clock time budget per move; must be positive.
      * @param ordering the base move ordering deeper iterations build on (the previous best is tried
      *                 ahead of it).
      */
     public IterativeDeepeningSearch(GameRules<S, M> rules, Evaluator<S> evaluator,
                                     MoveOrdering<S, M> ordering, Duration budget) {
-        this(rules, evaluator, ordering, requirePositiveNanos(budget), null, DEFAULT_MAX_DEPTH);
+        this(rules, evaluator, ordering, budget, DEFAULT_MAX_DEPTH);
+    }
+
+    /**
+     * As {@link #IterativeDeepeningSearch(GameRules, Evaluator, MoveOrdering, Duration)} but with an
+     * explicit depth cap. A cap well below the game's ply count turns the search into a strength
+     * ceiling rather than a mere endgame guard: the Hard difficulty (spec §7) caps depth so the bot
+     * stays beatable by a human who plans a few moves ahead, instead of out-calculating everyone as
+     * its budget allows — the budget then only bounds how long the capped search may take.
+     *
+     * @param maxDepth deepest iteration to run; must be {@code >= 1}.
+     */
+    public IterativeDeepeningSearch(GameRules<S, M> rules, Evaluator<S> evaluator,
+                                    MoveOrdering<S, M> ordering, Duration budget, int maxDepth) {
+        this(rules, evaluator, ordering, requirePositiveNanos(budget), null, maxDepth);
     }
 
     /**
@@ -74,6 +87,16 @@ public final class IterativeDeepeningSearch<S, M> implements Search<S, M> {
         this.budgetNanos = budgetNanos;
         this.injectedAbort = injectedAbort;
         this.maxDepth = maxDepth;
+    }
+
+    /** The wall-clock budget per move ({@link Duration#ZERO} for the predicate-driven test seam). */
+    public Duration budget() {
+        return Duration.ofNanos(budgetNanos);
+    }
+
+    /** The deepest iteration this search will run, however generous the budget. */
+    public int maxDepth() {
+        return maxDepth;
     }
 
     @Override

@@ -49,12 +49,12 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
  * a {@code GAME_OVER} is pushed and no AI reply is scheduled.
  *
  * <p>Opts into the production async path ({@code bot.async-reply=true}) — the rest of the suite runs
- * the reply synchronously (see the Surefire config). {@code bot.hard} is shrunk so a "Hard" search
- * exercises the async path without a multi-second test.
+ * the reply synchronously (see the Surefire config). {@code bot.hard.budget} is shrunk so a "Hard"
+ * search exercises the async path without a multi-second test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
-@TestPropertySource(properties = {"bot.async-reply=true", "bot.hard=600ms"})
+@TestPropertySource(properties = {"bot.async-reply=true", "bot.hard.budget=600ms"})
 class GameAsyncAiReplyTest {
 
     @LocalServerPort

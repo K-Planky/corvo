@@ -109,6 +109,11 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
         return nodes;
     }
 
+    /** The fixed number of plies searched from the root. */
+    public int depth() {
+        return depth;
+    }
+
     @Override
     public M bestMove(S state) {
         nodes = 0;

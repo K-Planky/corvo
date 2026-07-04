@@ -75,7 +75,7 @@ class GameReplayConsistencyTest {
 
     @Test
     void replayingPersistedMovesFromInitialStateReproducesStoredBoard() {
-        // Several full games against the random bot: the bot's randomness gives each history a
+        // Several full games against the Easy bot: its epsilon-random moves give each history a
         // different shape (and across runs, forced passes), so replay is exercised over real variety.
         for (int g = 0; g < 8; g++) {
             UUID gameId = playFullGame();
@@ -84,10 +84,10 @@ class GameReplayConsistencyTest {
     }
 
     /**
-     * Plays a vs-AI game (human Black, random bot White) to a terminal state through the production
-     * submit path: each {@link GameService#submitMove} applies the human's move and the bot's random
-     * reply. The human plays a deterministic move (first legal, or pass when forced) so the only
-     * source of variation is the bot.
+     * Plays a vs-AI game (human Black, Easy bot White) to a terminal state through the production
+     * submit path: each {@link GameService#submitMove} applies the human's move and the bot's reply.
+     * The human plays a deterministic move (first legal, or pass when forced) so the only source of
+     * variation is the bot.
      */
     private UUID playFullGame() {
         UUID gameId = gameService.createVsAiGame(humanId, BotDifficulty.EASY, BotSide.WHITE).id();

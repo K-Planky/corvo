@@ -10,9 +10,10 @@ import java.util.Objects;
  * ({@link GameRules#currentPlayer}, {@link GameRules#getLegalMoves}, {@link GameRules#applyMove},
  * {@link Evaluator#evaluate}) and compiles against any stub evaluator.
  *
- * <p>It is deliberately <em>not</em> a rung of the Milestone-6 AI ladder
- * (random → negamax → alpha-beta → iterative deepening); those deeper searches implement
- * {@link Search} alongside this one and reuse the same {@code GameRules} + {@code Evaluator} seam.
+ * <p>Originally a wiring reference outside the Milestone-6 AI ladder
+ * (random → negamax → alpha-beta → iterative deepening), it is now also the core of the <b>Easy</b>
+ * difficulty (spec §7): one greedy ply over the disc-count evaluator plays exactly like a beginner
+ * who grabs the most flips, wrapped in {@link EpsilonRandomSearch} for the occasional random move.
  *
  * @param <S> the game state type
  * @param <M> the move type
@@ -25,6 +26,11 @@ public final class GreedySearch<S, M> implements Search<S, M> {
     public GreedySearch(GameRules<S, M> rules, Evaluator<S> evaluator) {
         this.rules = Objects.requireNonNull(rules, "rules");
         this.evaluator = Objects.requireNonNull(evaluator, "evaluator");
+    }
+
+    /** The evaluator whose one-ply score this greedy maximises. */
+    public Evaluator<S> evaluator() {
+        return evaluator;
     }
 
     @Override

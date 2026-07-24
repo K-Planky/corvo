@@ -47,7 +47,7 @@ public class MatchmakingService {
         UUID opponent;
         synchronized (lock) {
             if (queue.contains(userId)) {
-                return MatchmakingStatusResponse.queued(); // already waiting — no self-pair
+                return MatchmakingStatusResponse.queued(); // already waiting, no self-pair
             }
             opponent = pollFirst();
             if (opponent == null) {
@@ -75,7 +75,7 @@ public class MatchmakingService {
     /**
      * Empties the queue. Package-private, for test isolation only: the queue is a process-lifetime
      * singleton, so tests sharing one Spring context must reset it between cases (production never
-     * clears it — players leave individually via {@link #leave}).
+     * clears it, players leave individually via {@link #leave}).
      */
     void clear() {
         synchronized (lock) {

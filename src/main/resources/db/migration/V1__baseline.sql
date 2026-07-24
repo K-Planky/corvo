@@ -5,5 +5,5 @@
 -- flyway_schema_history, which the M0.2 integration test asserts.
 --
 -- The real schema (User, Game, Move, RatingHistory + indexes) arrives in
--- V2__core_schema.sql during Milestone 2. Never edit an applied migration —
+-- V2__core_schema.sql during Milestone 2. Never edit an applied migration,
 -- add a new versioned file instead.

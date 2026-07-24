@@ -20,7 +20,7 @@ import org.hibernate.annotations.CreationTimestamp;
  * and undo.
  *
  * <p>{@code moveNumber} orders moves within a game and is unique per game (enforced by a DB unique
- * constraint on {@code (game_id, move_number)} — see {@code V2__core_schema.sql}).
+ * constraint on {@code (game_id, move_number)}, see {@code V2__core_schema.sql}).
  */
 @Entity
 @Table(name = "moves")

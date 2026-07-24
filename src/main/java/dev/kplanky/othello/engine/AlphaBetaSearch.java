@@ -7,20 +7,20 @@ import java.util.function.BooleanSupplier;
 /**
  * <b>Alpha-beta</b> pruning on top of {@link NegamaxSearch} (spec §7, rung 3 of the AI ladder). It
  * computes the <em>same</em> value as full-width negamax but skips subtrees that provably cannot
- * affect the result: it carries a window {@code [alpha, beta]} — the best score the side to move is
- * already assured of ({@code alpha}) and the best the opponent will allow ({@code beta}) — and the
+ * affect the result: it carries a window {@code [alpha, beta]}, the best score the side to move is
+ * already assured of ({@code alpha}) and the best the opponent will allow ({@code beta}), and the
  * moment a node's score reaches {@code beta} the rest of its siblings are cut, because the parent
  * would never let play reach this node anyway.
  *
  * <p>This rung is verified two ways against rung 2 (spec §7's AI-engine tests): for any
- * position+depth it returns the <b>same best move</b> as {@link NegamaxSearch} (correctness — same
+ * position+depth it returns the <b>same best move</b> as {@link NegamaxSearch} (correctness, same
  * earliest-on-ties tie-break), while {@link #nodesEvaluated()} reports <b>strictly fewer</b> nodes
  * whenever the branching admits any pruning (the concrete, measurable win). Node counting matches
  * negamax exactly (one count per searched child, root excluded) so the "before vs. after" comparison
  * is apples-to-apples.
  *
- * <p>Like negamax the search stays game-agnostic — parameterized only by {@link GameRules} and
- * {@link Evaluator} (spec §6) — and traverses a tree-internal forced pass via
+ * <p>Like negamax the search stays game-agnostic, parameterized only by {@link GameRules} and
+ * {@link Evaluator} (spec §6), and traverses a tree-internal forced pass via
  * {@link GameRules#pass(Object)} (a non-terminal node with no legal move), flipping the window like
  * any other ply.
  *
@@ -51,8 +51,8 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
 
     /**
      * Thrown to unwind the recursion when {@code abort} fires mid-search (spec §7's iterative
-     * deepening aborts a depth that overruns the time budget). It carries no stack trace — it is
-     * control flow, not an error — and is caught by the caller that supplied the abort hook.
+     * deepening aborts a depth that overruns the time budget). It carries no stack trace, it is
+     * control flow, not an error, and is caught by the caller that supplied the abort hook.
      */
     public static final class SearchAborted extends RuntimeException {
         public SearchAborted() {
@@ -61,7 +61,7 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
     }
 
     /**
-     * Unordered alpha-beta — tries moves in {@link GameRules#getLegalMoves} order. Equivalent to
+     * Unordered alpha-beta, tries moves in {@link GameRules#getLegalMoves} order. Equivalent to
      * passing {@link MoveOrdering#none()}; this is the node-count baseline an ordered search beats.
      *
      * @param depth plies to search from the root; must be {@code >= 1}. Evaluator scores must stay
@@ -104,7 +104,7 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
         this.depth = depth;
     }
 
-    /** Nodes visited by the most recent {@link #bestMove} call — the post-pruning count for §7. */
+    /** Nodes visited by the most recent {@link #bestMove} call, the post-pruning count for §7. */
     public long nodesEvaluated() {
         return nodes;
     }
@@ -119,7 +119,7 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
         nodes = 0;
         List<M> moves = rules.getLegalMoves(state);
         if (moves.isEmpty()) {
-            throw new IllegalStateException("no legal move available — the caller must pass");
+            throw new IllegalStateException("no legal move available, the caller must pass");
         }
         moves = ordering.order(state, moves);
 
@@ -129,7 +129,7 @@ public final class AlphaBetaSearch<S, M> implements Search<S, M> {
         for (M move : moves) {
             // Child value is from the opponent's perspective; negate it and swap the window. The root
             // beta is +inf, so each improving child is searched with an open upper bound and returns
-            // an exact score — which is why the best move matches full-width negamax exactly.
+            // an exact score, which is why the best move matches full-width negamax exactly.
             int score = -search(rules.applyMove(state, move), depth - 1, -POS_INF, -alpha);
             if (best == null || score > bestScore) { // strict ">" keeps the earliest move on ties
                 bestScore = score;

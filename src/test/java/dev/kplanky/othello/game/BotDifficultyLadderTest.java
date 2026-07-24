@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Strength-ordering guard for the difficulty ladder (spec §7): the tiers must actually get stronger,
  * or a future tuning tweak could silently invert Easy and Hard. Full games are played engine-vs-engine
  * through {@link BotEngine}'s real per-tier searches with a seeded {@code RandomGenerator}, so the
- * playoff is deterministic — no wall-clock flakiness (the one timed tier, Hard, gets a budget so
+ * playoff is deterministic, no wall-clock flakiness (the one timed tier, Hard, gets a budget so
  * generous the clock can never fire; its depth cap is the terminator, and a capped depth-5 search
  * finishes in milliseconds).
  *
@@ -65,7 +65,7 @@ class BotDifficultyLadderTest {
 
     /**
      * Plays a full game between {@code a} and {@code b} (auto-passing a side with no legal move) and
-     * returns {@code a}'s final disc margin — positive means {@code a} won.
+     * returns {@code a}'s final disc margin, positive means {@code a} won.
      */
     private int playOut(Search<OthelloState, OthelloMove> a, Search<OthelloState, OthelloMove> b,
                         boolean aIsBlack) {
@@ -89,7 +89,7 @@ class BotDifficultyLadderTest {
     /**
      * Default tier tuning, but Hard's clock made so generous it can never fire mid-playoff: the
      * depth cap is Hard's real strength limiter and terminates every move in milliseconds, so with
-     * the clock out of the picture Hard's play — and therefore the whole seeded playoff — is
+     * the clock out of the picture Hard's play, and therefore the whole seeded playoff, is
      * deterministic. The sync-think cap is raised to match so it doesn't clamp the budget back down.
      */
     private static BotProperties deterministicHardProperties() {

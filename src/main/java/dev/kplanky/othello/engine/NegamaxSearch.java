@@ -11,12 +11,12 @@ import java.util.Objects;
  * {@link Evaluator}'s zero-sum convention ("the same position scored from the opponent's perspective
  * is the negation"), so one branch replaces the separate min and max branches of textbook minimax.
  *
- * <p>This rung does <em>no</em> pruning — it visits every node to a fixed depth. It exists as the
+ * <p>This rung does <em>no</em> pruning, it visits every node to a fixed depth. It exists as the
  * <b>correctness reference</b> for alpha-beta (rung 3): for any position and depth, alpha-beta must
  * return the same best move while visiting strictly fewer nodes. {@link #nodesEvaluated()} exposes
  * the per-search node count so that "before vs. after" pruning win can be measured.
  *
- * <p>The search stays game-agnostic — it is parameterized only by {@link GameRules} and
+ * <p>The search stays game-agnostic, it is parameterized only by {@link GameRules} and
  * {@link Evaluator} (spec §6). A forced pass inside the tree (a non-terminal node with no legal
  * move) is advanced via {@link GameRules#pass(Object)}: the search cannot construct a pass move
  * {@code M} itself, since {@code getLegalMoves} returns an empty list for one.
@@ -63,7 +63,7 @@ public final class NegamaxSearch<S, M> implements Search<S, M> {
         nodes = 0;
         List<M> moves = rules.getLegalMoves(state);
         if (moves.isEmpty()) {
-            throw new IllegalStateException("no legal move available — the caller must pass");
+            throw new IllegalStateException("no legal move available, the caller must pass");
         }
 
         M best = null;

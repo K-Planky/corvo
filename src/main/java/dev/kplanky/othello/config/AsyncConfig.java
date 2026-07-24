@@ -41,7 +41,7 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setThreadNamePrefix("bot-reply-");
         // The dispatch happens after the human's move already committed, so rejection must NOT throw
         // (that would surface as a 500 on a successful move) and must NOT run on the caller (it's the
-        // after-commit request thread — a multi-second search would block it). Under extreme
+        // after-commit request thread, a multi-second search would block it). Under extreme
         // saturation we log and drop: the human's move stands; only the bot's reply is lost.
         executor.setRejectedExecutionHandler((task, exec) ->
                 log.error("botExecutor saturated (active={}, queue={}); dropping a vs-AI reply task",

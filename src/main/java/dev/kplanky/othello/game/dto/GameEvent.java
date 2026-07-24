@@ -1,10 +1,10 @@
 package dev.kplanky.othello.game.dto;
 
 /**
- * A server→client WebSocket push (spec §9). {@code type} is the event kind — {@code MOVE_MADE} (a
+ * A server→client WebSocket push (spec §9). {@code type} is the event kind, {@code MOVE_MADE} (a
  * move was applied), {@code GAME_OVER} (terminal), {@code YOUR_TURN} (M8.4), or the PvP
  * presence events {@code OPPONENT_DISCONNECTED}/{@code OPPONENT_RECONNECTED} (M11.2) on the per-game
- * topic {@code /topic/games/{id}}, or {@code MATCH_FOUND} (M9.1) on the recipient's personal queue —
+ * topic {@code /topic/games/{id}}, or {@code MATCH_FOUND} (M9.1) on the recipient's personal queue,
  * and {@code state} is the full game view the client re-renders from, oriented to the recipient (their
  * legal moves, the outcome fields, final disc counts). For {@code MATCH_FOUND} the {@code state}
  * carries the newly created game (its {@code id} is the new {@code gameId}). The presence events carry

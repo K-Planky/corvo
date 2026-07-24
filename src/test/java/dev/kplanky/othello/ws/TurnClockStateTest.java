@@ -45,7 +45,7 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
  * M10.2 acceptance (spec §15): each side's remaining time is surfaced in game state and in the
  * WebSocket push. {@code GET /api/games/{id}} and the {@code MOVE_MADE} payload carry
  * {@code blackTimeRemainingMs}/{@code whiteTimeRemainingMs} for a clocked PvP game (and {@code null}
- * for an unclocked vs-AI game), and a move decrements the mover's bank by the time their turn took —
+ * for an unclocked vs-AI game), and a move decrements the mover's bank by the time their turn took,
  * proving the clock is maintained server-side.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -127,7 +127,7 @@ class TurnClockStateTest {
     @Test
     void vsAiStateHasNoRemainingTime() throws Exception {
         Account alice = register("alice");
-        // vs-AI (bot plays White, human Black to move) — no clock.
+        // vs-AI (bot plays White, human Black to move), no clock.
         UUID vsAi = gameService.createVsAiGame(alice.id(), BotDifficulty.EASY, BotSide.WHITE).id();
 
         JsonNode get = getState(alice.token(), vsAi);

@@ -8,8 +8,8 @@ import java.util.random.RandomGenerator;
 /**
  * Blunder decorator for the difficulty ladder (spec §7): with probability {@code epsilon} it plays a
  * uniformly random legal move, otherwise it delegates to the wrapped {@link Search}. The random
- * branch is what makes a beatable bot feel <em>human</em> rather than merely shallow — a fallible
- * opponent occasionally hands over an opportunity, and no two games repeat — while the delegate
+ * branch is what makes a beatable bot feel <em>human</em> rather than merely shallow, a fallible
+ * opponent occasionally hands over an opportunity, and no two games repeat, while the delegate
  * defines the tier's baseline character (greedy for Easy, shallow alpha-beta for Medium).
  *
  * <p>Always returns a legal move: the random branch draws from {@link GameRules#getLegalMoves}, and
@@ -57,7 +57,7 @@ public final class EpsilonRandomSearch<S, M> implements Search<S, M> {
     public M bestMove(S state) {
         List<M> moves = rules.getLegalMoves(state);
         if (moves.isEmpty()) {
-            throw new IllegalStateException("no legal move available — the caller must pass");
+            throw new IllegalStateException("no legal move available, the caller must pass");
         }
         RandomGenerator source = rng != null ? rng : ThreadLocalRandom.current();
         if (source.nextDouble() < epsilon) {

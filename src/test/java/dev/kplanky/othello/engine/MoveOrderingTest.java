@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Move ordering (spec §7, M6 rung 3b). Two things are proven: (1) the ordering itself ranks squares
- * the way the spec describes — corners first, the corner-adjacent X-square last; and (2) the payoff —
+ * the way the spec describes, corners first, the corner-adjacent X-square last; and (2) the payoff,
  * feeding that ordering to {@link AlphaBetaSearch} makes it visit <b>strictly fewer</b> nodes than
  * the unordered baseline across a fixed suite, while still returning a move of the <b>same value</b>
  * (ordering is a pure performance hint, so it may pick a different equally-optimal move but never a
@@ -24,7 +24,7 @@ class MoveOrderingTest {
     private final OthelloRules rules = new OthelloRules();
     private final OthelloMoveOrdering ordering = new OthelloMoveOrdering();
 
-    /** Disc parity from {@code perspective}'s view — the same simple evaluator the other engine tests use. */
+    /** Disc parity from {@code perspective}'s view, the same simple evaluator the other engine tests use. */
     private static final Evaluator<OthelloState> PARITY =
             (state, perspective) -> state.count(perspective) - state.count(perspective.opponent());
 
@@ -44,7 +44,7 @@ class MoveOrderingTest {
         assertThat(ordered).startsWith(A1, H8); // both corners, highest weight, first
         assertThat(ordered).endsWith(B2);       // the X-square, lowest weight, last
         assertThat(ordered).containsExactlyInAnyOrderElementsOf(
-                input.stream().map(OthelloMove::square).toList()); // a permutation — nothing added/dropped
+                input.stream().map(OthelloMove::square).toList()); // a permutation, nothing added/dropped
     }
 
     @Test
@@ -73,7 +73,7 @@ class MoveOrderingTest {
                     new AlphaBetaSearch<>(rules, PARITY, ordering, depth);
             OthelloMove orderedMove = orderedSearch.bestMove(state);
 
-            // Same value — ordering may choose a different optimal move but never a worse one.
+            // Same value, ordering may choose a different optimal move but never a worse one.
             assertThat(moveValue(state, orderedMove, depth))
                     .as("ordered move is still optimal for %s", state)
                     .isEqualTo(moveValue(state, unorderedMove, depth));

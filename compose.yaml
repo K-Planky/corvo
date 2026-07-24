@@ -1,4 +1,4 @@
-# Local development database. Integration tests do NOT use this — they spin up their own
+# Local development database. Integration tests do NOT use this, they spin up their own
 # Postgres via Testcontainers. Bring it up with `docker compose up -d` before `./mvnw spring-boot:run`.
 services:
   postgres:

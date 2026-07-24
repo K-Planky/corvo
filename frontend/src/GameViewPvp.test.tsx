@@ -177,7 +177,7 @@ describe('GameView (PvP)', () => {
     // Locked in: no lobby exit while the PvP game is in progress.
     expect(screen.queryByRole('button', { name: /lobby/i })).not.toBeInTheDocument();
 
-    // A terminal state releases the player — an exit control returns.
+    // A terminal state releases the player, an exit control returns.
     act(() =>
       pushEvent({
         type: 'GAME_OVER',

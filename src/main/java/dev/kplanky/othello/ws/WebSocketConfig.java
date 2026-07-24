@@ -11,11 +11,11 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * STOMP-over-WebSocket wiring (spec §9). The single {@code /ws} endpoint accepts a native WebSocket
- * upgrade (Caddy passes it through transparently in prod — §13); STOMP itself carries the JWT, so the
+ * upgrade (Caddy passes it through transparently in prod, §13); STOMP itself carries the JWT, so the
  * HTTP handshake is anonymous and {@link StompAuthChannelInterceptor} authenticates the {@code
  * CONNECT}. An in-memory simple broker serves the push-only design: {@code /topic/games/{id}} for
  * per-game events and {@code /user/queue/...} for personal nudges; clients send no STOMP commands
- * (moves go over REST — §4), so the {@code /app} prefix exists only for completeness.
+ * (moves go over REST, §4), so the {@code /app} prefix exists only for completeness.
  */
 @Configuration
 @EnableWebSocketMessageBroker

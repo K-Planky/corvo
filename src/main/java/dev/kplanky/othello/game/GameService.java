@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Game orchestration (spec §4/§9/§11). Owns the mapping between the engine and the persisted
  * {@link Game} and is the single place that mutates a game's position. Move application validates
  * legality through the engine, persists the new board + {@link Move} row + {@code moveCount}, and on
- * terminal resolves the outcome — all in one transaction, so the board and move history can never
+ * terminal resolves the outcome, all in one transaction, so the board and move history can never
  * diverge (§11). Participant/turn authorization (M4.5) and the AI auto-reply (M4.3) wrap this core.
  */
 @Service
@@ -81,7 +81,7 @@ public class GameService {
      * Creates a {@code HUMAN_VS_AI} game for {@code userId}. The human takes the non-bot side; the
      * bot side keeps a {@code null} player id (bots have no {@code User} row, §5). The board starts at
      * the engine's initial position. When the bot plays Black it moves first, so its opening move is
-     * applied here through the shared move pipeline — recorded as move 1 — leaving the freshly created
+     * applied here through the shared move pipeline, recorded as move 1, leaving the freshly created
      * game already on the human's (White) turn.
      */
     @Transactional
@@ -120,7 +120,7 @@ public class GameService {
     /**
      * Creates a {@code HUMAN_VS_HUMAN} game for a matched pair (spec §9/§15, M9.1). Both sides carry a
      * player id; there is no bot ({@code botSide} stays {@code NONE}, {@code botDifficulty}/
-     * {@code botRating} null). The two players are assigned to Black/White at random — Black moves
+     * {@code botRating} null). The two players are assigned to Black/White at random, Black moves
      * first, so a fixed order would systematically favour one queue position. The board starts at the
      * engine's initial position (Black to move) and no opening move is applied (both sides are human).
      * Returns the new game id; the caller reads each player's oriented view via {@link #getGameState}.
@@ -161,7 +161,7 @@ public class GameService {
      * resulting state. The bot's reply is then computed <em>asynchronously</em> (M8): this method
      * returns immediately after the human's move and publishes an {@link AiReplyRequested} event, and
      * {@link AiReplyService} computes + applies the reply off the request thread and pushes it over
-     * WebSocket — so a multi-second Hard search never holds the HTTP request open. The returned view
+     * WebSocket, so a multi-second Hard search never holds the HTTP request open. The returned view
      * therefore reflects only the human's move; the bot's move arrives as a {@code MOVE_MADE} push.
      *
      * <p>When {@code bot.async-reply} is off the reply is played inline through the same transactional
@@ -184,7 +184,7 @@ public class GameService {
         } catch (ObjectOptimisticLockingFailureException | DataIntegrityViolationException e) {
             // Another submission for this position committed first (§11). Two concurrent submissions on
             // the same game collide as EITHER a stale @Version on the game UPDATE OR a duplicate
-            // (game_id, move_number) on the Move insert — whichever the flush hits first (Hibernate
+            // (game_id, move_number) on the Move insert, whichever the flush hits first (Hibernate
             // orders the insert before the update, so a real two-submission race usually trips the unique
             // index). Both mean the same thing; roll back and surface a 409 so the caller retries against
             // the fresh state. The board is left exactly as the winning move set it.
@@ -206,7 +206,7 @@ public class GameService {
     /**
      * Reads game {@code gameId} after a committed PvP move and describes the WebSocket push owed to the
      * mover's opponent (M9.2): the state oriented to the opponent (their legal moves now that the turn
-     * has flipped) and whether the move ended the game. Empty for a non-PvP or missing game. Read-only —
+     * has flipped) and whether the move ended the game. Empty for a non-PvP or missing game. Read-only,
      * the push itself is done by {@link PvpMoveNotifier} after this returns.
      */
     @Transactional(readOnly = true)
@@ -223,14 +223,14 @@ public class GameService {
     }
 
     /**
-     * Forfeits {@code gameId} if the side to move has run its time bank to zero (spec §15, M10) —
+     * Forfeits {@code gameId} if the side to move has run its time bank to zero (spec §15, M10),
      * called per game by the scheduled sweep. Re-reads and re-checks inside this transaction so a move
      * that committed between the sweep's candidate scan and here (refreshing {@code turnStartedAt}) is
      * seen and no false forfeit is issued. If a move instead wins the race with this write, {@code
      * flush} throws {@link ObjectOptimisticLockingFailureException}, which is deliberately <em>not</em>
      * caught here: swallowing it can't rescue the transaction (the persistence context is already
      * rollback-only, so commit would fail with {@code UnexpectedRollbackException}). It propagates out
-     * so the transaction rolls back cleanly and {@link TurnClockService#sweep()} skips this one game —
+     * so the transaction rolls back cleanly and {@link TurnClockService#sweep()} skips this one game,
      * the same "let the lock exception leave the transaction" pattern the human move path uses.
      * Returns the terminal state to push as {@code GAME_OVER} when a forfeit happened, else empty.
      */
@@ -258,7 +258,7 @@ public class GameService {
 
     /**
      * Forfeits {@code gameId} against {@code offenderUserId} because their WebSocket dropped and the
-     * disconnect grace period lapsed without a reconnect (spec §15, M11.2) — called per game by the
+     * disconnect grace period lapsed without a reconnect (spec §15, M11.2), called per game by the
      * disconnect sweep. Unlike a turn-clock timeout the offender is identified by user id, not the
      * side-to-move: a disconnect forfeits regardless of whose turn it is. Re-reads and re-checks inside
      * this transaction so a game a concurrent move (or another sweep) already ended returns empty and is
@@ -277,7 +277,7 @@ public class GameService {
         }
         Player offender = sideOf(game, offenderUserId);
         if (offender == null) {
-            return Optional.empty(); // not a participant — nothing to forfeit
+            return Optional.empty(); // not a participant, nothing to forfeit
         }
         forfeit(game, offender);
         games.flush();
@@ -308,8 +308,8 @@ public class GameService {
 
     /**
      * Applies the asynchronously-computed bot {@code move} through the shared pipeline (M8) and returns
-     * the new state oriented to {@code humanId}. Empty when it is no longer the bot's turn — the game
-     * was resolved or a concurrent write won the optimistic-lock race — so the worker pushes nothing.
+     * the new state oriented to {@code humanId}. Empty when it is no longer the bot's turn, the game
+     * was resolved or a concurrent write won the optimistic-lock race, so the worker pushes nothing.
      */
     @Transactional
     public Optional<GameStateResponse> applyBotReply(UUID gameId, OthelloMove move, UUID humanId) {
@@ -330,7 +330,7 @@ public class GameService {
     /**
      * The per-game/per-turn anti-cheat (§9/§10), checked in the spec's exact order: (1) the caller is
      * a participant (else 403); (2) the game is live and it is the caller's turn (else 409); (3) the
-     * move is in the server-computed legal-move set (else 422). The server — never the client —
+     * move is in the server-computed legal-move set (else 422). The server, never the client,
      * decides each verdict, so a forged or illegal move is rejected at the source.
      */
     private void authorizeMove(Game game, UUID callerId, OthelloMove move) {
@@ -372,7 +372,7 @@ public class GameService {
                 .toList();
     }
 
-    /** The caller's games, optionally filtered by {@code status} ({@code null} ⇒ all) — newest first. */
+    /** The caller's games, optionally filtered by {@code status} ({@code null} ⇒ all), newest first. */
     @Transactional(readOnly = true)
     public List<GameStateResponse> listGames(UUID callerId, GameStatus status) {
         return games.findForUser(callerId, status).stream()
@@ -406,8 +406,8 @@ public class GameService {
 
     /**
      * Plays the bot's reply when it is due: a {@code HUMAN_VS_AI} game that is still in progress and
-     * now on the bot's side. The bot makes exactly one move — its difficulty's chosen move, or a pass
-     * when it has none — through {@link #applyToGame}. After the bot moves the turn returns to the
+     * now on the bot's side. The bot makes exactly one move, its difficulty's chosen move, or a pass
+     * when it has none, through {@link #applyToGame}. After the bot moves the turn returns to the
      * human, so at most one reply is ever owed per human submission.
      */
     private void playBotReplyIfDue(Game game) {
@@ -445,7 +445,7 @@ public class GameService {
         int moveNumber = game.getMoveCount() + 1;
 
         // Server-authoritative turn clock (spec §15, M10): charge the mover the time their turn took and
-        // restart the clock for the side to move next. PvP-only — a vs-AI game has null banks (the
+        // restart the clock for the side to move next. PvP-only, a vs-AI game has null banks (the
         // opening move and bot replies must not touch clocks). A pass consumes time too (it flows here).
         if (isClocked(game)) {
             Instant now = Instant.now();
@@ -459,7 +459,7 @@ public class GameService {
             moves.save(Move.pass(game.getId(), moveNumber, mover));
         } else {
             // Discs that changed owner: opponent discs before the move that are the mover's after it.
-            // The placed square was empty before, so it is excluded — these are exactly the flips.
+            // The placed square was empty before, so it is excluded, these are exactly the flips.
             long flipped = before.discs(mover.opponent()) & after.discs(mover);
             moves.save(Move.placement(game.getId(), moveNumber, mover, move.square(), flipped));
         }
@@ -479,18 +479,18 @@ public class GameService {
 
     /**
      * Applies a resolved outcome to {@code game}: always sets {@code status}/{@code winnerId} from
-     * {@code winner} ({@link Optional#empty()} ⇒ draw), then records the competitive result — both
-     * players' W/L/D counters + symmetric Elo — <em>only for PvP</em>. A vs-AI game is unrated practice
+     * {@code winner} ({@link Optional#empty()} ⇒ draw), then records the competitive result, both
+     * players' W/L/D counters + symmetric Elo, <em>only for PvP</em>. A vs-AI game is unrated practice
      * (§8): it ends and shows a result but leaves no competitive trace (no Elo, W/L/D, or games-played).
      * Shared by {@link #finish} (winner from the board) and {@link #forfeit} (winner forced by a
-     * timeout — already PvP-only at its callers), so both reach the identical rating path.
+     * timeout, already PvP-only at its callers), so both reach the identical rating path.
      */
     private void resolveOutcome(Game game, Optional<Player> winner) {
         game.setStatus(winner.map(GameService::wonStatus).orElse(GameStatus.DRAW));
         // winnerId is the winning *human*; null when a bot wins or it's a draw (§5, Appendix C A1).
         game.setWinnerId(winner.map(side -> playerId(game, side)).orElse(null));
 
-        // Only PvP games are rated — a vs-AI game records nothing (§8). Return after status/winnerId so
+        // Only PvP games are rated, a vs-AI game records nothing (§8). Return after status/winnerId so
         // the practice game still finishes and displays its result.
         if (game.getOpponentType() != OpponentType.HUMAN_VS_HUMAN) {
             return;
@@ -507,9 +507,9 @@ public class GameService {
 
     /**
      * Forfeits the game against {@code offender} (spec §15): a flag-fall (M10 turn-clock timeout) or a
-     * lapsed disconnect grace (M11.2) is a competitive loss, so the opponent is awarded a rated win —
+     * lapsed disconnect grace (M11.2) is a competitive loss, so the opponent is awarded a rated win,
      * {@code status} = the opponent's {@code *_WON}, {@code winnerId} = the opponent human, and
-     * symmetric Elo applied — reusing the terminal outcome path. Both forfeit causes resolve here so a
+     * symmetric Elo applied, reusing the terminal outcome path. Both forfeit causes resolve here so a
      * player cannot escape a losing position by stalling or pulling the plug; {@code ABANDONED} stays
      * unused (a no-contest status kept available for a future admin/void action).
      */
@@ -526,7 +526,7 @@ public class GameService {
     private void recordResult(Game game, Player side, Optional<Player> winner, int opponentRating) {
         UUID userId = playerId(game, side);
         if (userId == null) {
-            return; // bot side — no User row to update
+            return; // bot side, no User row to update
         }
         User user = users.findById(userId).orElseThrow();
         double score;
@@ -556,7 +556,7 @@ public class GameService {
     }
 
     /**
-     * The rating the player on {@code side} is scored against — the other human's rating, read here
+     * The rating the player on {@code side} is scored against, the other human's rating, read here
      * <em>before</em> any update (see {@link #finish}) so the symmetric update is order-independent.
      * Only PvP games are rated (§8), so the opponent is always a human; the {@code getBotRating}
      * fallback is unreachable dead code kept for safety.
@@ -579,8 +579,8 @@ public class GameService {
     }
 
     /**
-     * Builds the state view for {@code callerId}, including the moves they may currently play and — for
-     * a clocked PvP game — each side's live remaining time (§15). Remaining is {@code null} on an
+     * Builds the state view for {@code callerId}, including the moves they may currently play and, for
+     * a clocked PvP game, each side's live remaining time (§15). Remaining is {@code null} on an
      * unclocked (vs-AI) game.
      */
     private GameStateResponse toResponse(Game game, UUID callerId) {
@@ -592,7 +592,7 @@ public class GameService {
     }
 
     /**
-     * The square indices {@code callerId} may legally play right now — empty unless the game is
+     * The square indices {@code callerId} may legally play right now, empty unless the game is
      * {@code IN_PROGRESS} and it is the caller's turn (an empty list then means they must pass).
      */
     private List<Integer> legalMovesFor(Game game, UUID callerId) {
@@ -629,7 +629,7 @@ public class GameService {
         };
     }
 
-    /** Whether {@code game} runs a turn clock — true only once its banks/start have been seeded (PvP). */
+    /** Whether {@code game} runs a turn clock, true only once its banks/start have been seeded (PvP). */
     static boolean isClocked(Game game) {
         return game.getTurnStartedAt() != null
                 && game.getBlackTimeMs() != null
@@ -639,7 +639,7 @@ public class GameService {
     /**
      * The live remaining bank in milliseconds for {@code side} (spec §15, M10). The side to move counts
      * down from {@code turnStartedAt} (clamped at 0); the idle side's bank is frozen at its stored
-     * value. Returns {@code null} for an unclocked (vs-AI) game — callers surface that as "no clock".
+     * value. Returns {@code null} for an unclocked (vs-AI) game, callers surface that as "no clock".
      */
     Long effectiveRemainingMs(Game game, Player side) {
         if (!isClocked(game)) {

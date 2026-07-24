@@ -10,12 +10,12 @@ import java.util.List;
  * Static positional move ordering for Othello alpha-beta (spec §7's "corners → high-value squares").
  * Every board square carries a fixed preference weight and moves are tried highest-weight first, so
  * the search examines a corner before a quiet centre square and a centre square before an X-square
- * (the diagonal-from-corner trap) — the order that makes alpha-beta cut earliest.
+ * (the diagonal-from-corner trap), the order that makes alpha-beta cut earliest.
  *
  * <p>This is a deliberately <em>cheap, rough</em> hint kept separate from the real position
  * {@link dev.kplanky.othello.engine.Evaluator} (Milestone 6 rung 4): ordering only needs a fast
  * "probably good square" ranking, not an accurate score, and it never affects the value the search
- * computes — only how many nodes it visits to get there. The richer "previous iteration's best move
+ * computes, only how many nodes it visits to get there. The richer "previous iteration's best move
  * first" hint pairs with iterative deepening and lands with that rung; this rung supplies the static
  * table it builds on.
  *

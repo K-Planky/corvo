@@ -6,7 +6,7 @@
 -- against this schema rather than each adding a migration.
 --
 -- Entities map to these tables with spring.jpa.hibernate.ddl-auto=validate. Enums are stored as
--- VARCHAR (Hibernate EnumType.STRING). Bitboards are signed BIGINT — bit 63 (h8) round-trips as a
+-- VARCHAR (Hibernate EnumType.STRING). Bitboards are signed BIGINT, bit 63 (h8) round-trips as a
 -- negative value, which is expected (§5 signed-storage caveat).
 
 -- "user" is reserved in Postgres, so the table is "users".

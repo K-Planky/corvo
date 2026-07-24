@@ -267,5 +267,4 @@ frontend/src/
 
 ## About
 
-Built by [kplanky](https://corvo.kplanky.dev) as a university coursework project. No open-source
-license is applied.
+Built by [kplanky](https://corvo.kplanky.dev). Released under the MIT License, see [LICENSE](LICENSE).

@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 /**
  * M4.5 acceptance (spec §9/§10): the per-game/per-turn anti-cheat on {@code POST
- * /api/games/{id}/moves}, checked in order — participant (403) → turn / game live (409) → legality
+ * /api/games/{id}/moves}, checked in order, participant (403) → turn / game live (409) → legality
  * (422). The server, never the client, decides each verdict.
  */
 @SpringBootTest
@@ -76,7 +76,7 @@ class GameMoveAuthorizationTest {
     @Test
     void nonParticipantIsForbidden() throws Exception {
         // Owner plays Black (bot White), so it's the owner's turn at the opening; an outsider who is
-        // not seated in this game may not move in it — rejected before any turn/legality check.
+        // not seated in this game may not move in it, rejected before any turn/legality check.
         String gameId = createVsAiGame();
         mockMvc.perform(authed(post("/api/games/" + gameId + "/moves"), outsiderToken)
                         .contentType(MediaType.APPLICATION_JSON)

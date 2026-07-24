@@ -15,8 +15,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * The difficulty ladder's blunder decorator (spec §7): with probability ε it plays a random legal
  * move, otherwise the wrapped search's move. The endpoints are exact (ε = 0 always delegates,
- * ε = 1 never does), a seeded mid-range ε takes both branches, and — like every search in the
- * engine — it never returns an illegal move.
+ * ε = 1 never does), a seeded mid-range ε takes both branches, and, like every search in the
+ * engine, it never returns an illegal move.
  */
 class EpsilonRandomSearchTest {
 

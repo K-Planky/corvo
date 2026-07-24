@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * with the final disc counts.
  *
  * <p>Termination is guaranteed because each placement fills exactly one empty square (flips don't
- * change occupancy) and occupancy is capped at 64, while a position with no move passes — two
+ * change occupancy) and occupancy is capped at 64, while a position with no move passes, two
  * passes in a row end the game. The ply cap below is only a safety net so a regression that broke
  * termination fails fast instead of hanging.
  */
@@ -44,7 +44,7 @@ class OthelloRulesPlayoutTest {
         int ply = 0;
         while (!rules.isTerminal(state)) {
             assertThat(ply)
-                    .as("game %d exceeded the ply cap — likely a non-terminating engine", gameIndex)
+                    .as("game %d exceeded the ply cap, likely a non-terminating engine", gameIndex)
                     .isLessThan(PLY_CAP);
 
             List<OthelloMove> legal = rules.getLegalMoves(state);

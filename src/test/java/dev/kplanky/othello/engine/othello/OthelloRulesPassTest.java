@@ -22,7 +22,7 @@ class OthelloRulesPassTest {
     /**
      * A Black-to-move position in which Black has no legal move but White does. Squares: a1=White,
      * b1=White, c1=Black. Black's only disc is c1; the White run b1,a1 sits to its west and runs off
-     * the board edge, so there is no empty square Black can play to bracket it — Black must pass.
+     * the board edge, so there is no empty square Black can play to bracket it, Black must pass.
      * White, in contrast, can play d1 (d1→c1 Black→b1 White brackets), so this fixture proves the
      * asymmetry rather than a dead position where both sides are stuck.
      */

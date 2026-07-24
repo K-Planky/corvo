@@ -1,4 +1,4 @@
-// One game — vs-AI or human-vs-human (M12.2). The board plus score, turn/status banner, and the Pass
+// One game, vs-AI or human-vs-human (M12.2). The board plus score, turn/status banner, and the Pass
 // action that appears only when the server reports the caller has no legal placement. The move POST
 // returns the state after the caller's move only; the reply (the bot's, or the PvP opponent's) is
 // pushed over WebSocket (M8/M9), so we subscribe to the game's events and replace the whole GameState
@@ -19,7 +19,7 @@ import { isOver, viewerSide, type GameState, type Player, type User } from './ty
 // seen; the margin beyond that is a deliberate "bot is thinking" beat so a fast bot doesn't snap back
 // the instant the human's flip finishes (~300ms here). States are shown in `moveCount` order, and
 // successive states for the *same* board (the bot's MOVE_MADE then its identical YOUR_TURN/GAME_OVER)
-// collapse harmlessly — see showState.
+// collapse harmlessly, see showState.
 export const STAGE_MS = 750;
 
 interface GameViewProps {
@@ -35,7 +35,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
   const pvp = game.opponentType === 'HUMAN_VS_HUMAN';
   // PvP-only UI state: the opponent's display name (label falls back to "Opponent"), whether their
   // socket is currently down (grace-window notice, M11.2), and whether the game ended without a move
-  // — a timeout/disconnect forfeit rather than a played-out finish (see showState).
+  //, a timeout/disconnect forfeit rather than a played-out finish (see showState).
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [oppOffline, setOppOffline] = useState(false);
   const [forfeit, setForfeit] = useState(false);
@@ -53,14 +53,14 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
   const stageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // The moveCount of the last *in-progress* position we displayed. A normal finish advances moveCount
-  // past this (the final move); a timeout/disconnect forfeit does not (no move) — so a terminal state
+  // past this (the final move); a timeout/disconnect forfeit does not (no move), so a terminal state
   // whose moveCount equals this is a forfeit. Only in-progress states update it, so it's stable across
   // the redundant MOVE_MADE(N)+GAME_OVER(N) pair a normal PvP finish sends (see showState).
   const lastLiveMoveCount = useRef(initial.moveCount);
 
   // Turn-clock display (PvP-only, M10). `clockAnchor` marks when the current `game` state (and thus its
   // authoritative remaining-time values) was received; between server pushes we tick the side-to-move
-  // down from it for smoothness. `clockTick` just forces a re-render on an interval — the real values
+  // down from it for smoothness. `clockTick` just forces a re-render on an interval, the real values
   // are recomputed from the authoritative bank minus the elapsed wall time (see remainingMs).
   const clockAnchor = useRef(performance.now());
   const [, setClockTick] = useState(0);
@@ -68,7 +68,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
   // A human move is mid-flight (its POST is in progress). Near the end of a game the bot's search is
   // near-instant, so its reply (a MOVE_MADE push carrying the board after *both* moves) can reach us
   // over the socket before that POST resolves. Processed as-is it would show the post-bot board in one
-  // step — the human's own move never animating, sometimes rewinding when the late POST lands. So
+  // step, the human's own move never animating, sometimes rewinding when the late POST lands. So
   // while a move is in flight we hold the latest incoming push and replay it only once the human-move
   // state has been queued (see play()), which keeps them in moveCount order.
   const moveInFlight = useRef(false);
@@ -106,7 +106,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
   // Enqueue a server state for display, ordered by moveCount. A state older than what's already shown
   // or queued is dropped (an out-of-order or duplicate push can never rewind the board); a state with
   // the same moveCount is the same move's board (the bot's MOVE_MADE then its identical
-  // YOUR_TURN/GAME_OVER) — collapse to the latest, updating in place if it's already on screen so a
+  // YOUR_TURN/GAME_OVER), collapse to the latest, updating in place if it's already on screen so a
   // status-only change like GAME_OVER still lands.
   const showState = useCallback(
     (next: GameState) => {
@@ -164,7 +164,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
 
   // Apply a server state (from a push or a reconnect re-fetch): while a human move is in flight, hold
   // the latest (keeping the higher moveCount) so it can't be shown ahead of the human-move state the
-  // POST will return — see moveInFlight/play(); otherwise enqueue it for display.
+  // POST will return, see moveInFlight/play(); otherwise enqueue it for display.
   const applyIncoming = useCallback(
     (state: GameState) => {
       if (moveInFlight.current) {
@@ -180,13 +180,13 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
 
   // Re-render live from server pushes: the bot's reply (MOVE_MADE) and the terminal result
   // (GAME_OVER) arrive here rather than in the move POST's response. Re-subscribe per game id. On a
-  // socket reconnect (M11), re-GET authoritative state so a move applied during the gap — whose push
-  // we missed — is caught; showState drops stale/duplicate moveCounts, so a no-op reconnect is safe.
+  // socket reconnect (M11), re-GET authoritative state so a move applied during the gap, whose push
+  // we missed, is caught; showState drops stale/duplicate moveCounts, so a no-op reconnect is safe.
   useEffect(() => {
     const sub = subscribeToGame(
       initial.id,
       (event: GameEvent) => {
-        // Presence events (M11.2) carry the *unchanged* state — they only toggle the disconnect
+        // Presence events (M11.2) carry the *unchanged* state, they only toggle the disconnect
         // notice and must never reach the board-advancing path, or an informational event could
         // collapse/rewind the board.
         if (event.type === 'OPPONENT_DISCONNECTED') {
@@ -213,7 +213,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
     clockAnchor.current = performance.now();
   }, [game]);
 
-  // Re-render ~4×/sec so the side-to-move clock visibly counts down between pushes — only while a
+  // Re-render ~4×/sec so the side-to-move clock visibly counts down between pushes, only while a
   // live clocked (PvP) game is in progress.
   useEffect(() => {
     if (!clocks || over) return;
@@ -221,7 +221,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
     return () => clearInterval(t);
   }, [clocks, over]);
 
-  // Label the PvP opponent by username (public stats read, reused from M7.3). Best-effort — the UI
+  // Label the PvP opponent by username (public stats read, reused from M7.3). Best-effort, the UI
   // falls back to "Opponent" until/unless this resolves.
   useEffect(() => {
     if (!pvp) return;
@@ -251,7 +251,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
     } finally {
       setBusy(false);
       moveInFlight.current = false;
-      // Replay a bot reply that raced in ahead of the POST response — now that the human-move state is
+      // Replay a bot reply that raced in ahead of the POST response, now that the human-move state is
       // queued, this lands after it in moveCount order rather than overwriting/preceding it.
       if (heldPush.current) {
         const held = heldPush.current;
@@ -264,7 +264,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
   return (
     <section className="game">
       <header className="game-bar">
-        {/* No lobby exit while a PvP match is live — you're locked in until it finishes (M12.x).
+        {/* No lobby exit while a PvP match is live, you're locked in until it finishes (M12.x).
             vs-AI keeps the button, and once a PvP game is over it returns (over) so you can leave. */}
         {!(pvp && !over) && (
           <button type="button" className="link" onClick={onExit}>
@@ -295,9 +295,9 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
       </div>
 
       {/* Grace doesn't pause the turn clock (M11 policy), so we deliberately keep the disconnected
-          side's clock ticking here — it mirrors the server, which can still forfeit them on time. */}
+          side's clock ticking here, it mirrors the server, which can still forfeit them on time. */}
       {oppOffline && !over && (
-        <p className="banner banner-warn">Opponent disconnected — waiting for them to reconnect…</p>
+        <p className="banner banner-warn">Opponent disconnected, waiting for them to reconnect…</p>
       )}
 
       <Banner
@@ -305,7 +305,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
         you={you}
         waiting={waiting}
         waitingLabel={pvp ? 'Waiting for opponent…' : 'Bot is thinking…'}
-        // Forfeit copy is PvP-only — vs-AI has no clocks/disconnect, so it never "forfeits".
+        // Forfeit copy is PvP-only, vs-AI has no clocks/disconnect, so it never "forfeits".
         forfeit={pvp && forfeit}
       />
 
@@ -327,7 +327,7 @@ export default function GameView({ initial, user, onExit }: GameViewProps) {
             disabled={busy}
             onClick={() => play({ pass: true })}
           >
-            No legal move — Pass
+            No legal move, Pass
           </button>
         )}
         {over && (
@@ -404,8 +404,8 @@ function Banner({
 function resultText(game: GameState, you: Player, forfeit: boolean): string {
   if (game.status === 'DRAW') return "It's a draw.";
   const winner: Player = game.status === 'BLACK_WON' ? 'BLACK' : 'WHITE';
-  if (winner === you) return forfeit ? 'You win — opponent forfeited 🎉' : 'You win! 🎉';
-  return forfeit ? 'You lose — forfeited' : 'You lose.';
+  if (winner === you) return forfeit ? 'You win, opponent forfeited 🎉' : 'You win! 🎉';
+  return forfeit ? 'You lose, forfeited' : 'You lose.';
 }
 
 function resultClass(game: GameState, you: Player): string {

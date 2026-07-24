@@ -38,7 +38,7 @@ body {
   display: grid;
   place-items: center;
   /* Center the content block in the viewport (a lone auto-row grid otherwise sits at the top,
-     leaving dead space below — most visible on the game screen). */
+     leaving dead space below, most visible on the game screen). */
   align-content: safe center;
   padding: 1.5rem;
 }
@@ -339,7 +339,7 @@ body {
 .game {
   /* Single knob for the whole play area. The board fills this width, and the scoreboard/banner
      dimensions below are derived from it as `calc(var(--play) * factor)` (factors chosen so the look
-     is unchanged at the old 520px) — so bumping this one value zooms the board *and* its chrome
+     is unchanged at the old 520px), so bumping this one value zooms the board *and* its chrome
      together and proportionally, instead of the board growing while the fixed-size chrome only
      widens. Capped at 96vw so it still shrinks to fit narrow screens. */
   --play: min(600px, 96vw);
@@ -440,7 +440,7 @@ body {
 }
 
 /* Fixed width (fits the longest label, "Bot is thinking…") so the centered strip never reflows as
-   the turn text changes — that width change was the per-turn "bounce". */
+   the turn text changes, that width change was the per-turn "bounce". */
 .banner-text {
   min-width: 9.5em;
   text-align: center;
@@ -482,7 +482,7 @@ body {
 .board {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  /* Constrain rows too, else empty rows collapse and disc rows grow — the board's cells must stay a
+  /* Constrain rows too, else empty rows collapse and disc rows grow, the board's cells must stay a
      fixed 8x8 of equal squares regardless of what's placed. */
   grid-template-rows: repeat(8, 1fr);
   gap: 2px;
@@ -529,7 +529,7 @@ body {
 }
 
 .disc-sm {
-  /* Scoreboard swatch — scales with the play area (--play on .game). */
+  /* Scoreboard swatch, scales with the play area (--play on .game). */
   width: calc(var(--play) * 0.0346);
   height: calc(var(--play) * 0.0346);
 }
@@ -634,7 +634,7 @@ body {
     animation: none;
     transform: rotateY(180deg);
   }
-  /* No flip to track — keep the shadow at full width. */
+  /* No flip to track, keep the shadow at full width. */
   .flip-shadow {
     animation: none;
   }

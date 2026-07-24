@@ -32,12 +32,12 @@ public interface GameRules<S, M> {
      * Advances a forced pass: the side to move has no legal move ({@link #getLegalMoves} is empty)
      * yet the game is not over, so the turn passes to the opponent with the position otherwise
      * unchanged. The generic search needs this because it cannot construct a pass move {@code M}
-     * itself — {@code getLegalMoves} returns an empty list for a pass, giving the search no move
+     * itself, {@code getLegalMoves} returns an empty list for a pass, giving the search no move
      * value to apply.
      *
      * <p>Only games with a pass rule (Othello) ever reach a non-terminal position with no legal
      * move; games where "no legal move" means the game is over (chess: checkmate/stalemate; Gomoku:
-     * a full board) report {@link #isTerminal} first, so the search never calls this — hence the
+     * a full board) report {@link #isTerminal} first, so the search never calls this, hence the
      * throwing default.
      */
     default S pass(S state) {

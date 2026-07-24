@@ -30,7 +30,7 @@ public class ApiExceptionHandler {
         return body(HttpStatus.CONFLICT, ex.getMessage());
     }
 
-    /** Bean-validation failures (@Valid request bodies) — return the first field's reason. */
+    /** Bean-validation failures (@Valid request bodies), return the first field's reason. */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
         FieldError first = ex.getBindingResult().getFieldError();

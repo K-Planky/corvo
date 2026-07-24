@@ -25,7 +25,7 @@ import org.springframework.context.annotation.Import;
 
 /**
  * Elo overhaul (spec §8): vs-AI games are unrated practice. A terminal vs-AI game ends and sets its
- * status, but leaves no competitive trace — the human's Elo is unchanged, no {@link RatingHistory} row
+ * status, but leaves no competitive trace, the human's Elo is unchanged, no {@link RatingHistory} row
  * is written, and W/L/D / games-played stay zero. (PvP rating is covered by the WebSocket PvP tests.)
  */
 @SpringBootTest
@@ -71,7 +71,7 @@ class GameEloTest {
 
         Game game = playToTerminal(gameId);
 
-        // The game really finished (status set), but it's practice — nothing competitive was recorded.
+        // The game really finished (status set), but it's practice, nothing competitive was recorded.
         assertThat(game.getStatus()).isNotEqualTo(GameStatus.IN_PROGRESS);
 
         // Elo unchanged from the starting value; no rating history written.
@@ -79,7 +79,7 @@ class GameEloTest {
         assertThat(human.getEloRating()).isEqualTo(1200);
         assertThat(ratings.findAll()).isEmpty();
 
-        // W/L/D and games-played untouched — a bot game leaves no record.
+        // W/L/D and games-played untouched, a bot game leaves no record.
         assertThat(human.getGamesPlayed()).isZero();
         assertThat(human.getWins()).isZero();
         assertThat(human.getLosses()).isZero();

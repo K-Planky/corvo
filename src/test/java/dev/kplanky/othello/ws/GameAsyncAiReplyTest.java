@@ -48,7 +48,7 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
  * request thread and pushed over WebSocket as {@code MOVE_MADE}; when the human's own move is terminal
  * a {@code GAME_OVER} is pushed and no AI reply is scheduled.
  *
- * <p>Opts into the production async path ({@code bot.async-reply=true}) — the rest of the suite runs
+ * <p>Opts into the production async path ({@code bot.async-reply=true}), the rest of the suite runs
  * the reply synchronously (see the Surefire config). {@code bot.hard.budget} is shrunk so a "Hard"
  * search exercises the async path without a multi-second test.
  */
@@ -109,7 +109,7 @@ class GameAsyncAiReplyTest {
         Subscriptions subs = subscribe(gameId);
         int firstLegal = rules.getLegalMoves(OthelloState.initial()).get(0).square();
 
-        // The POST returns the state after only the HUMAN's move — it did not wait for the Hard search.
+        // The POST returns the state after only the HUMAN's move, it did not wait for the Hard search.
         JsonNode response = post("/api/games/" + gameId + "/moves", token, "{\"position\":" + firstLegal + "}");
         assertThat(response.get("moveCount").asInt()).isEqualTo(1);
         assertThat(response.get("currentTurn").asText()).isEqualTo("WHITE"); // the bot's turn now
@@ -132,7 +132,7 @@ class GameAsyncAiReplyTest {
 
     @Test
     void humanTerminalMovePushesGameOverAndSchedulesNoReply() throws Exception {
-        // Crafted near-terminal position: Black=a1, White=h8 — Black (the human) has no legal move, and
+        // Crafted near-terminal position: Black=a1, White=h8, Black (the human) has no legal move, and
         // one pass already stands, so the human's forced pass is the second consecutive pass → terminal.
         Game crafted = new Game();
         crafted.setOpponentType(OpponentType.HUMAN_VS_AI);

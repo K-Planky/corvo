@@ -38,7 +38,7 @@ class OthelloRulesLegalMovesTest {
         // Row 1 (rank 1): b1=White, c1=Black  → Black plays a1, capturing b1 (a real move).
         // Also f1=Black, g1=White, h1=White, a2 empty. A naive east shift would walk the g1/h1
         // run "off" the right edge and report a2 (square 8) as a phantom legal move. With edge
-        // masking it must not — the only legal move is a1 (square 0).
+        // masking it must not, the only legal move is a1 (square 0).
         long black = (1L << 2) | (1L << 5);            // c1, f1
         long white = (1L << 1) | (1L << 6) | (1L << 7); // b1, g1, h1
         OthelloState state = new OthelloState(black, white, Player.BLACK, 0);
@@ -54,7 +54,7 @@ class OthelloRulesLegalMovesTest {
         // Positive sanity check that bracketing works for a disc sitting on the a-file:
         // a1=Black, b1=White, c1=White, d1 empty → Black plays d1, capturing b1,c1.
         // (The decisive no-wrap proof is the right-edge test above; here a1>>>1 is simply 0, so
-        // masked and naive generation agree — this only confirms an edge-anchored capture is found.)
+        // masked and naive generation agree, this only confirms an edge-anchored capture is found.)
         // Only legal move is d1 (square 3).
         long black = 1L << 0;                          // a1
         long white = (1L << 1) | (1L << 2);            // b1, c1

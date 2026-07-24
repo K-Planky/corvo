@@ -32,7 +32,7 @@ export interface GameSubscription {
  *
  * <p>{@code onReconnect} fires on every connect <em>after</em> the first (spec §15, M11): a move may
  * have been applied while the socket was down and its push missed, so the caller re-`GET`s
- * authoritative state to catch up — the board is server-authoritative, so a returning client just
+ * authoritative state to catch up, the board is server-authoritative, so a returning client just
  * re-fetches and re-subscribes (no client resync). The first connect needs no fetch: the mount already
  * loaded state.
  */
@@ -63,11 +63,11 @@ export function subscribeToGame(
 
 /**
  * Connect and subscribe to the caller's personal queue only ({@code /user/queue/notifications}),
- * with no game topic — used by the lobby to wait for a {@code MATCH_FOUND} push before any game
+ * with no game topic, used by the lobby to wait for a {@code MATCH_FOUND} push before any game
  * exists (spec §9/§15, M12.1). {@code onReady} fires on the first connect: the caller joins the
  * matchmaking queue only once subscribed, so a pairing pushed right after joining can't be missed
  * (the simple broker has no durable queue for an unsubscribed destination). A reconnect
- * re-subscribes but does not re-fire {@code onReady} — a dropped socket doesn't remove the caller
+ * re-subscribes but does not re-fire {@code onReady}, a dropped socket doesn't remove the caller
  * from the server-side queue, so re-joining would be wrong.
  *
  * <p>Known limitation (same non-durable-broker class as the M9 single-instance note): if the socket

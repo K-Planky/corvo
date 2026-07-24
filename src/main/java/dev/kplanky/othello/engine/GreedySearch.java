@@ -6,7 +6,7 @@ import java.util.Objects;
 /**
  * Minimal reference {@link Search}: a one-ply greedy that plays the legal move whose resulting
  * position the {@link Evaluator} scores highest for the side to move. It exists to prove the generic
- * seam is genuinely <em>wired</em> — it exercises every collaborator
+ * seam is genuinely <em>wired</em>, it exercises every collaborator
  * ({@link GameRules#currentPlayer}, {@link GameRules#getLegalMoves}, {@link GameRules#applyMove},
  * {@link Evaluator#evaluate}) and compiles against any stub evaluator.
  *
@@ -38,7 +38,7 @@ public final class GreedySearch<S, M> implements Search<S, M> {
         Player perspective = rules.currentPlayer(state);
         List<M> moves = rules.getLegalMoves(state);
         if (moves.isEmpty()) {
-            throw new IllegalStateException("no legal move available — the caller must pass");
+            throw new IllegalStateException("no legal move available, the caller must pass");
         }
 
         // Seed from the first legal move (not Integer.MIN_VALUE) so the method is total even if an

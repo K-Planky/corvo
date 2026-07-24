@@ -23,21 +23,21 @@ import org.springframework.stereotype.Component;
 /**
  * Maps a game's {@link BotDifficulty} to the AI that plays it (spec §7). This is the single seam
  * where difficulty turns into engine behaviour, and each tier is a distinct playing <em>character</em>
- * — evaluator, depth, and blunder chance all vary, because time budget alone cannot make a fast
+ *, evaluator, depth, and blunder chance all vary, because time budget alone cannot make a fast
  * engine beatable:
  *
  * <ul>
- *   <li><b>Easy</b> — one greedy ply over {@link DiscCountEvaluator} (grabs the most flips, like a
+ *   <li><b>Easy</b>, one greedy ply over {@link DiscCountEvaluator} (grabs the most flips, like a
  *       beginner), wrapped in {@link EpsilonRandomSearch} for an occasional random move.</li>
- *   <li><b>Medium</b> — fixed shallow {@link AlphaBetaSearch} over the phase-aware
+ *   <li><b>Medium</b>, fixed shallow {@link AlphaBetaSearch} over the phase-aware
  *       {@link OthelloEvaluator} (sees tactics, not deep strategy), with a small blunder chance.</li>
- *   <li><b>Hard</b> — depth-capped {@link IterativeDeepeningSearch} over the full evaluator with the
+ *   <li><b>Hard</b>, depth-capped {@link IterativeDeepeningSearch} over the full evaluator with the
  *       static {@link OthelloMoveOrdering}; deterministic, strong, but bounded so a human who plans a
  *       few moves ahead can win.</li>
  * </ul>
  *
  * <p>All knobs come from {@link BotProperties}. The difficulty's fixed Elo label (1000/1500/1800)
- * also comes from here, recorded on the game at creation — display-only, since vs-AI is unrated
+ * also comes from here, recorded on the game at creation, display-only, since vs-AI is unrated
  * practice (spec §8).
  *
  * <p>A fresh search is built per move: none of the searches hold state across a call, so this is
@@ -57,7 +57,7 @@ public class BotEngine {
     /** Randomness for the Easy/Medium blunder branch; {@code null} draws per call (thread-safe). */
     private final RandomGenerator rng;
 
-    @Autowired // two constructors exist (the other is the test seam) — tell Spring which one to use
+    @Autowired // two constructors exist (the other is the test seam), tell Spring which one to use
     public BotEngine(GameRules<OthelloState, OthelloMove> rules, BotProperties properties) {
         this(rules, properties, null);
     }
@@ -81,7 +81,7 @@ public class BotEngine {
      * The move chooser for the <em>asynchronous</em> reply (M8): Hard gets its full, uncapped budget.
      * Safe because the search runs off the request thread on the bounded worker pool and the move is
      * pushed over WebSocket, so a slow Hard search holds no HTTP request open. Easy and Medium are
-     * identical on both paths — they don't take a time budget.
+     * identical on both paths, they don't take a time budget.
      */
     public Search<OthelloState, OthelloMove> asyncSearchFor(BotDifficulty difficulty) {
         return searchWithHardBudget(difficulty, properties.hard().budget());

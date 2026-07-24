@@ -5,24 +5,24 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * AI difficulty tuning (spec §7), bound from the {@code bot.*} properties. Each difficulty is a
- * distinct playing <em>character</em>, not just a bigger time budget — a fast engine is
+ * distinct playing <em>character</em>, not just a bigger time budget, a fast engine is
  * near-unbeatable at any budget, so beatable tiers need weaker heuristics, shallower depth, and a
  * blunder chance:
  *
  * <ul>
- *   <li><b>Easy</b> — one greedy ply over disc count (plays like a beginner grabbing flips), plus an
+ *   <li><b>Easy</b>, one greedy ply over disc count (plays like a beginner grabbing flips), plus an
  *       {@code epsilon} chance per move of playing a random legal move.</li>
- *   <li><b>Medium</b> — fixed-depth alpha-beta ({@code depth} plies) over the full phase-aware
+ *   <li><b>Medium</b>, fixed-depth alpha-beta ({@code depth} plies) over the full phase-aware
  *       evaluator, plus a small {@code epsilon} blunder chance.</li>
- *   <li><b>Hard</b> — iterative deepening over the full evaluator, capped at {@code maxDepth} plies
+ *   <li><b>Hard</b>, iterative deepening over the full evaluator, capped at {@code maxDepth} plies
  *       within a {@code budget} per move; deterministic.</li>
  * </ul>
  *
  * <p>{@code syncThinkCap} clamps Hard's budget whenever the vs-AI reply is computed
  * <em>synchronously on the HTTP request thread</em> (creation's bot-opening move, and the move-submit
  * reply when {@code asyncReply} is off), so a slow search can't hold the request open (default 1 s).
- * Easy and Medium don't take a time budget — a greedy ply and a depth-3 alpha-beta both return in
- * milliseconds — so the cap is moot for them.
+ * Easy and Medium don't take a time budget, a greedy ply and a depth-3 alpha-beta both return in
+ * milliseconds, so the cap is moot for them.
  *
  * <p>{@code asyncReply} (default {@code true}, M8) moves the move-submit AI reply off the request
  * thread onto a bounded worker pool and pushes it over WebSocket, so the cap no longer applies there

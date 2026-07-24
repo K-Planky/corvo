@@ -9,7 +9,7 @@ import java.util.function.LongUnaryOperator;
  * mask out the file that would otherwise wrap across the board edge: shifting "east" (col+1) by one
  * bit turns an h-file disc into the a-file of the next row, so the result is masked with
  * {@link #NOT_A_FILE}; westward shifts are masked with {@link #NOT_H_FILE}. Vertical shifts cannot
- * wrap — bits shifted past the ends of the 64-bit board simply disappear. Masking out this
+ * wrap, bits shifted past the ends of the 64-bit board simply disappear. Masking out this
  * wraparound is the load-bearing edge correctness the spec calls out.
  */
 final class Bitboards {

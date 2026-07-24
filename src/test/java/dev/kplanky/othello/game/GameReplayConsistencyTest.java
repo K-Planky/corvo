@@ -28,13 +28,13 @@ import org.springframework.context.annotation.Import;
 /**
  * M4.7 acceptance (spec §5): the intentional board + move-list redundancy. Re-applying a game's
  * persisted {@link Move} list from {@link GameRules#initialState()} must reproduce the stored
- * {@code boardBlack}/{@code boardWhite} exactly — this is what makes a game replayable/resumable from
+ * {@code boardBlack}/{@code boardWhite} exactly, this is what makes a game replayable/resumable from
  * its move history alone. Each move's redundant {@code flippedMask} column is checked the same way: it
  * must equal the flips recomputed during replay, so the move list is internally self-consistent and
  * not merely coincident with the snapshot.
  *
  * <p>Games are driven through the real {@link GameService#submitMove} path against the random bot, so
- * the histories carry genuine variety — placements in every direction and the occasional forced pass.
+ * the histories carry genuine variety, placements in every direction and the occasional forced pass.
  * Several full games are replayed to exercise that variety rather than a single fixed line.
  */
 @SpringBootTest

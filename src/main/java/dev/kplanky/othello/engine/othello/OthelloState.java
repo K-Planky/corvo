@@ -13,7 +13,7 @@ import java.util.Optional;
  * disc).
  *
  * <p>{@code consecutivePasses} tracks how many turns in a row have been passed; two in a row ends
- * the game (terminal detection arrives in a later task — it is carried in the state now so the
+ * the game (terminal detection arrives in a later task, it is carried in the state now so the
  * state model does not have to change).
  */
 public record OthelloState(long black, long white, Player toMove, int consecutivePasses) {

@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * The {@code GameRules<S,M>} + {@code Evaluator<S>} search seam (spec §6/§7, M1.7). These tests wire
  * the game-agnostic {@link GreedySearch} to the concrete Othello rules against <em>stub</em>
- * evaluators — proving the seam compiles and is parameterized by both collaborators, and that the
+ * evaluators, proving the seam compiles and is parameterized by both collaborators, and that the
  * evaluator (not a hardcoded heuristic) actually drives move selection. The real Othello evaluator
  * and the negamax ladder arrive in Milestone 6.
  */
@@ -21,7 +21,7 @@ class SearchSeamTest {
 
     private final OthelloRules rules = new OthelloRules();
 
-    /** Disc parity from {@code perspective}'s view — a deliberately trivial stand-in evaluator. */
+    /** Disc parity from {@code perspective}'s view, a deliberately trivial stand-in evaluator. */
     private static final Evaluator<OthelloState> DISC_PARITY =
             (state, perspective) -> state.count(perspective) - state.count(perspective.opponent());
 
@@ -58,7 +58,7 @@ class SearchSeamTest {
         Search<OthelloState, OthelloMove> maximize = new GreedySearch<>(rules, DISC_PARITY);
         assertThat(maximize.bestMove(state).square()).isEqualTo(0);
 
-        // Negating the evaluator flips the preference to f1 — proof the evaluator drives the choice.
+        // Negating the evaluator flips the preference to f1, proof the evaluator drives the choice.
         Evaluator<OthelloState> negated = (s, p) -> -DISC_PARITY.evaluate(s, p);
         Search<OthelloState, OthelloMove> minimize = new GreedySearch<>(rules, negated);
         assertThat(minimize.bestMove(state).square()).isEqualTo(5);

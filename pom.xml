@@ -150,7 +150,7 @@
                          every @SpringBootTest sharing ONE cached Spring context, where a per-class
                          property override would fragment the cache and slow CI. Trade-off: running
                          these tests straight from an IDE (no Surefire) falls back to the 1 s default
-                         cap — pass -Dbot.sync-think-cap=10ms there if the vs-AI tests feel slow. -->
+                         cap, pass -Dbot.sync-think-cap=10ms there if the vs-AI tests feel slow. -->
                     <systemPropertyVariables>
                         <bot.sync-think-cap>10ms</bot.sync-think-cap>
                         <!-- Default the vs-AI reply to synchronous in-request so the deterministic

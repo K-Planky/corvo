@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Terminal detection and winner determination (spec §6/§14, M1.5).
  *
- * <p>Two terminal conditions only: a consecutive <em>double</em> pass, or a full board — never a
+ * <p>Two terminal conditions only: a consecutive <em>double</em> pass, or a full board, never a
  * single pass. Winner = higher disc count; equal ⇒ draw. A wipeout resolves through the pass path
  * with the surviving side winning, with no special terminal rule.
  */
@@ -31,7 +31,7 @@ class OthelloRulesTerminalTest {
 
     @Test
     void aSinglePassDoesNotEndTheGame() {
-        // One pass on record is not terminal — the game ends only on a *double* pass.
+        // One pass on record is not terminal, the game ends only on a *double* pass.
         OthelloState onePass = new OthelloState(bit(0), bit(1), Player.BLACK, 1);
         assertThat(rules.isTerminal(onePass)).isFalse();
     }
@@ -53,7 +53,7 @@ class OthelloRulesTerminalTest {
     @Test
     void aDoublePassIsReachedThroughTheApplyPath() {
         // End-to-end via the engine, not a hand-built counter: a position where neither side can
-        // move. a1=Black, b1=Black, the rest empty — neither colour can ever bracket the other
+        // move. a1=Black, b1=Black, the rest empty, neither colour can ever bracket the other
         // (only one colour is present), so both must pass in turn, reaching a double pass.
         OthelloState start = new OthelloState(bit(0) | bit(1), 0L, Player.BLACK, 0);
         assertThat(OthelloRules.legalMoveMask(start)).as("Black has no move").isZero();
@@ -110,7 +110,7 @@ class OthelloRulesTerminalTest {
     void wipeoutResolvesToTheSurvivingSideThroughThePassPath() {
         // One side reduced to zero discs is NOT a special terminal rule. White is wiped out (zero
         // discs); Black holds a1,b1. Black to move has no legal move (nothing to bracket) and passes;
-        // White, with no discs, also has no move and passes — double pass ends it, Black surviving.
+        // White, with no discs, also has no move and passes, double pass ends it, Black surviving.
         OthelloState wipeout = new OthelloState(bit(0) | bit(1), 0L, Player.BLACK, 0);
         assertThat(wipeout.count(Player.WHITE)).isZero();
         assertThat(rules.isTerminal(wipeout)).as("not terminal until the double pass plays out").isFalse();

@@ -26,9 +26,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * M4.4 acceptance (spec §9): the REST surface drives a vs-AI game end to end —
+ * M4.4 acceptance (spec §9): the REST surface drives a vs-AI game end to end,
  * create → get state (board/turn/caller's legal moves/status) → submit move → move history →
- * list my games — and returns the documented shapes. (Move authorization is M4.5.)
+ * list my games, and returns the documented shapes. (Move authorization is M4.5.)
  */
 @SpringBootTest
 @AutoConfigureMockMvc

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
  * The periodic trigger for the PvP turn-clock sweep (spec §15, M10): a thin timer that calls
  * {@link TurnClockService#sweep()} every {@code pvp.clock.check-interval-ms}. Kept separate from the
  * sweep logic so it can be switched off in tests via {@code pvp.clock.scheduler-enabled=false}
- * (Surefire sets this) while the always-present {@link TurnClockService} is still driven directly —
+ * (Surefire sets this) while the always-present {@link TurnClockService} is still driven directly,
  * the same "logic-vs-trigger" split the async AI reply uses for its own toggle.
  */
 @Component

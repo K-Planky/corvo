@@ -47,7 +47,7 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 /**
  * M10.1 acceptance (spec §15): the PvP turn clock is server-authoritative. A player whose time bank
- * runs out on their turn is forfeited by the server-side sweep — a rated win for the opponent — and the
+ * runs out on their turn is forfeited by the server-side sweep, a rated win for the opponent, and the
  * result is pushed over WebSocket as {@code GAME_OVER}. A game with time left is untouched, a move that
  * lands before the sweep cancels the forfeit (the server re-checks under the transaction), and vs-AI
  * games carry no clock and are never swept.
@@ -101,8 +101,8 @@ class TurnClockForfeitTest {
 
     @Test
     void expiredTurnIsForfeitedServerSideWithSymmetricEloAndGameOverPush() throws Exception {
-        Account alice = register("alice"); // Black — to move, and out of time
-        Account bob = register("bob"); // White — wins on the flag
+        Account alice = register("alice"); // Black, to move, and out of time
+        Account bob = register("bob"); // White, wins on the flag
 
         // Black is to move but their clock is exhausted (1 s bank, started 5 s ago ⇒ 0 remaining).
         UUID gameId = newClockedPvpGame(alice.id(), bob.id(), 1_000L, 60_000L, secondsAgo(5));
@@ -112,7 +112,7 @@ class TurnClockForfeitTest {
         int aliceBefore = users.findById(alice.id()).orElseThrow().getEloRating();
         int bobBefore = users.findById(bob.id()).orElseThrow().getEloRating();
 
-        turnClock.sweep(); // the server-side check — not the client
+        turnClock.sweep(); // the server-side check, not the client
 
         Game game = games.findById(gameId).orElseThrow();
         assertThat(game.getStatus()).isEqualTo(GameStatus.WHITE_WON); // Black (the offender) forfeits
@@ -136,7 +136,7 @@ class TurnClockForfeitTest {
     void gameWithTimeLeftIsNotForfeited() throws Exception {
         Account alice = register("alice");
         Account bob = register("bob");
-        // Full banks, clock just started — Black has plenty of time.
+        // Full banks, clock just started, Black has plenty of time.
         UUID gameId = newClockedPvpGame(alice.id(), bob.id(), 60_000L, 60_000L, Instant.now());
 
         BlockingQueue<Map<String, Object>> bobTopic = subscribeTopic(bob.token(), gameId);
@@ -157,7 +157,7 @@ class TurnClockForfeitTest {
         int blackMove = rules.getLegalMoves(OthelloState.initial()).get(0).square();
         postMove(alice.token(), gameId, "{\"position\":" + blackMove + "}"); // resets turnStartedAt to now
 
-        turnClock.sweep(); // now it is White's turn with a fresh, full clock — no forfeit
+        turnClock.sweep(); // now it is White's turn with a fresh, full clock, no forfeit
 
         Game game = games.findById(gameId).orElseThrow();
         assertThat(game.getStatus()).isEqualTo(GameStatus.IN_PROGRESS);
@@ -168,7 +168,7 @@ class TurnClockForfeitTest {
     void sweepForfeitsEveryExpiredGameInOneTick() {
         Account alice = register("alice");
         Account bob = register("bob");
-        // Two independent PvP games, both with Black's clock expired — one tick must resolve both
+        // Two independent PvP games, both with Black's clock expired, one tick must resolve both
         // (a failure on one must not abort the loop before the other is checked).
         UUID g1 = newClockedPvpGame(alice.id(), bob.id(), 1_000L, 60_000L, secondsAgo(5));
         UUID g2 = newClockedPvpGame(bob.id(), alice.id(), 1_000L, 60_000L, secondsAgo(5));

@@ -1,12 +1,12 @@
 // The 8x8 Othello board, rendered purely from the server's `cells` string. Squares the server
 // marked legal are highlighted and clickable; everything else is presentational. No game logic
-// here — a click just reports the square index up to the caller.
+// here, a click just reports the square index up to the caller.
 //
 // Discs animate on change: a freshly placed disc pops in, and a captured disc does a 3D flip from
 // its old colour to its new one. We detect what changed by diffing the previous `cells` against the
 // current one (kept in a ref). Each animation needs a painted frame plus its duration to be seen, so
 // GameView staggers the human move and the bot's WebSocket reply (STAGE_MS) rather than letting a
-// fast reply overwrite the human-move frame before it animates — see GameView's showState.
+// fast reply overwrite the human-move frame before it animates, see GameView's showState.
 
 import { useRef } from 'react';
 import type { Player } from './types';
@@ -32,9 +32,9 @@ export default function Board({
   const legal = new Set(legalMoves);
 
   // Previous board, for the flip/pop change detection. We hold the *pre-change* board and only
-  // advance it when `cells` actually changes — not on every render. So a captured disc keeps
+  // advance it when `cells` actually changes, not on every render. So a captured disc keeps
   // rendering as the same <flipper> element (stable key) across re-renders that *don't* change the
-  // board — e.g. the parent toggling `busy`/`staging` mid-flip — and React preserves the in-flight
+  // board, e.g. the parent toggling `busy`/`staging` mid-flip, and React preserves the in-flight
   // CSS animation instead of swapping in a static disc and cutting it short. (Updating prev in an
   // effect instead would make any such re-render drop the animation early.)
   const prevRef = useRef(cells);
@@ -119,7 +119,7 @@ function renderDisc(square: number, cell: string, before: string, delayMs: numbe
     // The drop shadow lives on a separate, non-rotating layer behind the flipper rather than on the
     // rotating faces. A box-shadow on a face only paints while that face is front-facing, so a disc
     // waiting its turn in a cascade (holding its old colour, edge-up, before its delay elapses) would
-    // otherwise look flat — its shadow vanishing until it flips. The static layer keeps the shadow in
+    // otherwise look flat, its shadow vanishing until it flips. The static layer keeps the shadow in
     // every phase: waiting, flipping, and at rest.
     const from = before === 'B' ? 'black' : 'white';
     return (

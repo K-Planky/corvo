@@ -1,4 +1,4 @@
-// Shapes mirrored from the server DTOs (spec §9). The client is a thin view over these — it never
+// Shapes mirrored from the server DTOs (spec §9). The client is a thin view over these, it never
 // recomputes game logic, it only renders what the server reports and posts the moves the server
 // says are legal.
 
@@ -64,7 +64,7 @@ export interface RatingHistoryPoint {
   createdAt: string;
 }
 
-/** Public per-user stats (mirrors the server `UserStatsResponse`, spec §9) — no email (PII). */
+/** Public per-user stats (mirrors the server `UserStatsResponse`, spec §9), no email (PII). */
 export interface UserStats {
   id: string;
   username: string;
@@ -81,7 +81,7 @@ export function isOver(game: GameState): boolean {
   return game.status !== 'IN_PROGRESS';
 }
 
-/** The side the human plays — the side the bot does not (vs-AI only). */
+/** The side the human plays, the side the bot does not (vs-AI only). */
 export function humanSide(game: GameState): Player {
   return game.botSide === 'BLACK' ? 'WHITE' : 'BLACK';
 }

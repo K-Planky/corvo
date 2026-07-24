@@ -35,7 +35,7 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 /**
- * M8.2 acceptance (spec §9/§10): {@code /topic/games/{id}} is subscribable only by a participant — a
+ * M8.2 acceptance (spec §9/§10): {@code /topic/games/{id}} is subscribable only by a participant, a
  * participant's subscription receives the game's pushes; a non-participant's {@code SUBSCRIBE} is
  * rejected by the interceptor.
  */
@@ -110,7 +110,7 @@ class WebSocketTopicAuthorizationTest {
         });
 
         // The SUBSCRIBE registers asynchronously, so re-push until the participant receives it (or we
-        // give up) — robust under CI load, unlike a single fixed sleep.
+        // give up), robust under CI load, unlike a single fixed sleep.
         String got = null;
         for (int i = 0; i < 50 && got == null; i++) {
             broker.convertAndSend("/topic/games/" + gameId, "ping");

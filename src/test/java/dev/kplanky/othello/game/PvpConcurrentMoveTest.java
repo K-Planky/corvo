@@ -30,14 +30,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * M9.3 acceptance (spec §11): the concurrent-move race, proven under real human-vs-human play. Two
- * simultaneous {@link GameService#submitMove} calls on the same game — both by the on-turn player (a
- * double-click / two-tab hazard that PvP makes real) — resolve as exactly one success and one
+ * simultaneous {@link GameService#submitMove} calls on the same game, both by the on-turn player (a
+ * double-click / two-tab hazard that PvP makes real), resolve as exactly one success and one
  * {@link ConcurrentMoveException} (409). The loser's transaction rolls back, so the board is left
  * exactly as the winning move set it: a single coherent move, never a mix.
  *
  * <p>Unlike the vs-AI M4.6 race (where only one writer inserts a Move row), here <em>both</em>
  * submissions target {@code move_number = 1}, so the conflict trips whichever guard the flush hits
- * first — the {@code (game_id, move_number)} unique index or the stale {@code @Version} — both of
+ * first, the {@code (game_id, move_number)} unique index or the stale {@code @Version}, both of
  * which {@code submitMove} maps to 409.
  *
  * <p>Not {@code @Transactional}: each writer needs its own committed transaction on its own thread.
@@ -98,7 +98,7 @@ class PvpConcurrentMoveTest {
 
     @Test
     void twoSimultaneousSubmissionsResolveAsOneSuccessAndOne409WithBoardIntact() throws Exception {
-        // Two DISTINCT legal opening moves for Black — both pass authorization (Black's turn, both
+        // Two DISTINCT legal opening moves for Black, both pass authorization (Black's turn, both
         // legal), so the race is decided at the write, not at the anti-cheat.
         List<OthelloMove> legal = rules.getLegalMoves(OthelloState.initial());
         OthelloMove moveA = legal.get(0);
@@ -111,7 +111,7 @@ class PvpConcurrentMoveTest {
 
         // A blocker holds the game row's write lock (SELECT ... FOR UPDATE) without touching @Version.
         // Both real submitMove calls read version 0 (MVCC, non-blocking) and apply, then stall at their
-        // flush behind this lock — so both provably raced from the same version before either wrote.
+        // flush behind this lock, so both provably raced from the same version before either wrote.
         Thread blocker = new Thread(() -> tx.executeWithoutResult(s -> {
             jdbc.queryForObject("select 1 from games where id = ? for update", Integer.class, gameId);
             blockerHasLock.countDown();
@@ -128,7 +128,7 @@ class PvpConcurrentMoveTest {
         racerB.start();
 
         // Wait until both racers are parked on a lock (one on the game row UPDATE, one behind the other's
-        // uncommitted (game_id, 1) Move insert) — proof both read version 0 — then release the blocker.
+        // uncommitted (game_id, 1) Move insert), proof both read version 0, then release the blocker.
         awaitBlockedBackends(2);
         blockerMayRelease.countDown();
 
@@ -140,7 +140,7 @@ class PvpConcurrentMoveTest {
         assertThat(success.get()).as("one submission succeeds").isNotNull();
         assertThat(failure.get()).as("the other loses with 409").isInstanceOf(ConcurrentMoveException.class);
 
-        // The board is exactly the winner's single move — never a mix, never both applied.
+        // The board is exactly the winner's single move, never a mix, never both applied.
         Game finalState = games.findById(gameId).orElseThrow();
         assertThat(finalState.getMoveCount()).isEqualTo(1);
         assertThat(moves.findByGameIdOrderByMoveNumberAsc(gameId)).hasSize(1);
@@ -164,7 +164,7 @@ class PvpConcurrentMoveTest {
 
     /**
      * Blocks until {@code n} backends are waiting on a lock (each racer parked at its flush). The blocker
-     * itself sits {@code idle in transaction}, so it doesn't count — only the {@code active} racers on a
+     * itself sits {@code idle in transaction}, so it doesn't count, only the {@code active} racers on a
      * {@code Lock} wait event do. Makes the conflict deterministic without a timing guess.
      */
     private void awaitBlockedBackends(int n) {

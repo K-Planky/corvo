@@ -69,13 +69,13 @@ public class AiReplyService {
                     if (after.status() != GameStatus.IN_PROGRESS) {
                         publisher.gameOver(gameId, after);
                     } else {
-                        // The bot moved and the turn is back to the human — nudge their personal queue.
+                        // The bot moved and the turn is back to the human, nudge their personal queue.
                         publisher.yourTurn(humanId, after);
                     }
                 });
             }
             case BotReplyPlan.Nothing() -> {
-                // Not a live vs-AI game on the bot's turn (e.g. a lost race) — nothing to push.
+                // Not a live vs-AI game on the bot's turn (e.g. a lost race), nothing to push.
             }
         }
     }

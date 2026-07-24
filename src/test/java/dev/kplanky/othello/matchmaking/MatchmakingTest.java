@@ -39,7 +39,7 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 /**
  * M9.1 acceptance (spec §9/§15): two queued players are paired into a {@code HUMAN_VS_HUMAN} game and
  * both receive {@code MATCH_FOUND} (with the new {@code gameId}) on their personal queue. Also covers
- * the queue mechanics — leaving dequeues, and a double-join is idempotent (no self-pairing).
+ * the queue mechanics, leaving dequeues, and a double-join is idempotent (no self-pairing).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
@@ -74,7 +74,7 @@ class MatchmakingTest {
         ratings.deleteAll();
         games.deleteAll();
         users.deleteAll();
-        // The queue is a process-lifetime singleton — reset it too, or a leftover (now-stale) user id
+        // The queue is a process-lifetime singleton, reset it too, or a leftover (now-stale) user id
         // would pair with the next test's player and hit the games→users FK.
         matchmaking.clear();
 

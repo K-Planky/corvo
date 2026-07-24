@@ -101,7 +101,7 @@ describe('App boot routing', () => {
   });
 
   it('clears a stale marker and lands on the lobby when the marked game has finished', async () => {
-    sessionStorage.setItem('othello.activeGame', 'a1'); // game since finished — not in the list
+    sessionStorage.setItem('othello.activeGame', 'a1'); // game since finished, not in the list
     vi.mocked(listGames).mockResolvedValue([]);
 
     render(<App />);

@@ -5,7 +5,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.stereotype.Service;
 
 /**
- * Pushes a PvP move to the mover's opponent over WebSocket (spec §9/§15, M9.2) — the PvP mirror of
+ * Pushes a PvP move to the mover's opponent over WebSocket (spec §9/§15, M9.2), the PvP mirror of
  * {@link AiReplyService}, minus the search (there is no bot). Driven by {@link PvpMoveApplied},
  * handled <em>after</em> the move transaction commits so the pushed state is the committed board and
  * any terminal Elo is already applied.

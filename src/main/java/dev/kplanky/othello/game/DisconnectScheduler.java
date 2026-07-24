@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  * calls {@link DisconnectPolicyService#sweep()} every {@code pvp.disconnect.check-interval-ms}. Kept
  * separate from the sweep logic so it can be switched off in tests via {@code
  * pvp.disconnect.scheduler-enabled=false} (Surefire sets this) while the always-present {@link
- * DisconnectPolicyService} is still driven directly — the same "logic-vs-trigger" split the turn-clock
+ * DisconnectPolicyService} is still driven directly, the same "logic-vs-trigger" split the turn-clock
  * sweep uses ({@link TurnClockScheduler}).
  */
 @Component

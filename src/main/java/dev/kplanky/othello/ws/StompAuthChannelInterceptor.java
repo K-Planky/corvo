@@ -20,11 +20,11 @@ import org.springframework.stereotype.Component;
  * anti-cheat:
  *
  * <ul>
- *   <li><b>CONNECT</b> — the JWT rides in an {@code Authorization: Bearer <jwt>} STOMP header (the
- *       HTTP handshake itself is anonymous — see {@link WebSocketConfig}). A missing, malformed, or
+ *   <li><b>CONNECT</b>, the JWT rides in an {@code Authorization: Bearer <jwt>} STOMP header (the
+ *       HTTP handshake itself is anonymous, see {@link WebSocketConfig}). A missing, malformed, or
  *       expired token fails the {@code CONNECT}, so an unauthenticated client never opens a session;
  *       a valid token pins a {@link StompPrincipal} (named by user id) to the session.
- *   <li><b>SUBSCRIBE</b> — only a participant may subscribe to {@code /topic/games/{id}}, so a user
+ *   <li><b>SUBSCRIBE</b>, only a participant may subscribe to {@code /topic/games/{id}}, so a user
  *       cannot eavesdrop on a game they are not in. Personal destinations ({@code /user/**}) are
  *       inherently scoped to the session principal and need no extra check.
  * </ul>
@@ -82,7 +82,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     private void authorizeSubscribe(StompHeaderAccessor accessor) {
         String destination = accessor.getDestination();
         if (destination == null || !destination.startsWith(GAME_TOPIC_PREFIX)) {
-            return; // Not a game topic (e.g. /user/**) — no per-game check needed.
+            return; // Not a game topic (e.g. /user/**), no per-game check needed.
         }
         UUID userId = currentUserId(accessor);
         UUID gameId;

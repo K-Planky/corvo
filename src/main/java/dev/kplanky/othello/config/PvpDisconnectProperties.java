@@ -6,13 +6,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * PvP opponent-disconnect policy configuration (spec §15, M11.2), bound from {@code pvp.disconnect.*}.
  * When a participant's WebSocket drops, a grace timer of {@code grace} starts; if they do not
- * reconnect before it lapses, a scheduled sweep forfeits them (a rated win for the present player —
+ * reconnect before it lapses, a scheduled sweep forfeits them (a rated win for the present player,
  * the documented policy).
  *
- * <p>Binds only {@code grace} — the one value read in service logic. The sweep's cadence ({@code
+ * <p>Binds only {@code grace}, the one value read in service logic. The sweep's cadence ({@code
  * pvp.disconnect.check-interval-ms}) and its on/off switch ({@code pvp.disconnect.scheduler-enabled},
  * which the deterministic tests disable) are pure infrastructure knobs read directly by the
- * scheduler's annotations, so they intentionally live outside this record — mirroring
+ * scheduler's annotations, so they intentionally live outside this record, mirroring
  * {@link PvpClockProperties}.
  */
 @ConfigurationProperties(prefix = "pvp.disconnect")

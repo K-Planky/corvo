@@ -18,7 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Authenticates requests carrying a {@code Authorization: Bearer <jwt>} header (spec §10). A valid
  * token populates the {@link SecurityContextHolder} with the verified principal; a missing or
  * invalid token leaves the context empty, so a protected endpoint then rejects the request with
- * {@code 401} via the configured entry point. The filter never rejects on its own — that keeps
+ * {@code 401} via the configured entry point. The filter never rejects on its own, that keeps
  * public endpoints reachable regardless of a malformed token.
  */
 @Component

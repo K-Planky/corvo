@@ -2,7 +2,7 @@ package dev.kplanky.othello.repository;
 
 /**
  * A single leaderboard row projected straight out of the Postgres window-function query (spec §8).
- * Spring Data maps the native query's column aliases to these getters by name — {@code rank} and
+ * Spring Data maps the native query's column aliases to these getters by name, {@code rank} and
  * {@code percentile} are computed in SQL ({@code RANK()} / {@code PERCENT_RANK()}), not in app code.
  */
 public interface LeaderboardRow {

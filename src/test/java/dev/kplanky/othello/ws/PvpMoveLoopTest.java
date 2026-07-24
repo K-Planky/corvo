@@ -88,7 +88,7 @@ class PvpMoveLoopTest {
 
     @Test
     void opponentMovesArriveOverWebSocketBothDirections() throws Exception {
-        Account alice = register("alice"); // Black — moves first
+        Account alice = register("alice"); // Black, moves first
         Account bob = register("bob"); // White
         UUID gameId = newPvpGame(alice.id(), bob.id(), OthelloState.initial());
 
@@ -101,7 +101,7 @@ class PvpMoveLoopTest {
         assertThat(blackResp.get("moveCount").asInt()).isEqualTo(1);
         assertThat(blackResp.get("currentTurn").asText()).isEqualTo("WHITE");
 
-        // Bob (the opponent, who did not POST) receives it as a MOVE_MADE, oriented to him — it is now
+        // Bob (the opponent, who did not POST) receives it as a MOVE_MADE, oriented to him, it is now
         // his turn, so the pushed state carries White's legal moves. (The topic is a broadcast, so the
         // mover receives her own move too; each side just filters to the move it cares about.)
         Map<String, Object> toBob = pollUntilMoveCount(bobTopic, 1);
@@ -142,7 +142,7 @@ class PvpMoveLoopTest {
 
         // A crafted position where neither side has a legal placement: Black owns a1/a2/a3, White owns
         // h8, and White has already passed (consecutivePasses = 1). Black's forced pass is the second
-        // consecutive pass ⇒ terminal, and Black (3 discs) beats White (1) — a decisive result.
+        // consecutive pass ⇒ terminal, and Black (3 discs) beats White (1), a decisive result.
         long black = OthelloState.bit(0) | OthelloState.bit(8) | OthelloState.bit(16);
         long white = OthelloState.bit(63);
         OthelloState nearTerminal = new OthelloState(black, white, Player.BLACK, 1);

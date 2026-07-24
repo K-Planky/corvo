@@ -1,12 +1,12 @@
-# CI — build + tests + SAST on every PR and push (spec §12).
+# CI, build + tests + SAST on every PR and push (spec §12).
 # Jobs run in parallel:
-#   build   — ./mvnw verify (Testcontainers Postgres; ubuntu-latest provides Docker).
+#   build  , ./mvnw verify (Testcontainers Postgres; ubuntu-latest provides Docker).
 #             No CI secrets: surefire injects a fake test-only JWT_SECRET (see pom.xml).
-#   semgrep — SAST gate (p/java, p/secrets, p/owasp-top-ten). Fails on ERROR-severity
+#   semgrep, SAST gate (p/java, p/secrets, p/owasp-top-ten). Fails on ERROR-severity
 #             ("Blocking") findings. Findings are surfaced as a downloadable SARIF
 #             artifact; the GitHub Security-tab (code scanning) upload is wired but
-#             gated off by default — see the note on that step.
-#   trivy   — CVE gate. Scans (a) the filesystem (dependency vulns) and (b) the Docker
+#             gated off by default, see the note on that step.
+#   trivy  , CVE gate. Scans (a) the filesystem (dependency vulns) and (b) the Docker
 #             image built here. Fails on fixable CRITICAL/HIGH (--ignore-unfixed).
 #             Same SARIF-artifact + gated-Security-tab surfacing as semgrep.
 name: CI
@@ -56,7 +56,7 @@ jobs:
         run: pipx install semgrep
 
       # The gate. We scan with the three rulesets and gate on ERROR severity
-      # (Semgrep's "Blocking" tier) — high-confidence findings fail the build;
+      # (Semgrep's "Blocking" tier), high-confidence findings fail the build;
       # lower-severity advisories don't. --error makes this step exit non-zero on
       # any finding; the SARIF is still written, so the upload steps (if: always())
       # surface it. This step alone is the build-gating security control.
@@ -82,7 +82,7 @@ jobs:
       # Security, which is NOT enabled on this private repo (the code-scanning API
       # 403s), so this step is gated off by default to avoid a guaranteed failure.
       # To enable: turn on Advanced Security for the repo, then set repository
-      # variable ENABLE_GHAS_UPLOAD=true — findings then appear in the Security tab.
+      # variable ENABLE_GHAS_UPLOAD=true, findings then appear in the Security tab.
       - name: Upload SARIF to the Security tab (requires GitHub Advanced Security)
         if: ${{ always() && vars.ENABLE_GHAS_UPLOAD == 'true' }}
         uses: github/codeql-action/upload-sarif@v3
@@ -103,7 +103,7 @@ jobs:
 
       # Pin the scanner binary for reproducible CLI behaviour; the vuln DB is fetched
       # fresh at scan time regardless. Download the install script (tag-pinned to the
-      # same trivy release) then run it as a separate step — don't pipe curl straight
+      # same trivy release) then run it as a separate step, don't pipe curl straight
       # into a shell (semgrep gha-curl-pipe-shell; a hijacked URL would run arbitrary
       # code on the runner).
       - name: Install Trivy
@@ -111,13 +111,13 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.71.2/contrib/install.sh -o install-trivy.sh
           sh install-trivy.sh -b /usr/local/bin v0.71.2
 
-      # (a) Filesystem scan — dependency CVEs from pom.xml + npm lockfiles. exit-code 1
+      # (a) Filesystem scan, dependency CVEs from pom.xml + npm lockfiles. exit-code 1
       # so a finding fails the step; continue-on-error lets the image scan + uploads
       # still run, and the final gate step re-derives the red from the step outcome.
       # --offline-scan: do NOT resolve transitive POMs from Maven Central (shared CI
       # runner IPs get 429-rate-limited there, which trivy treats as FATAL). The image
-      # scan below is the authoritative Java dependency scan — it reads concrete library
-      # versions from the built fat jar — so this fs pass covers the npm lockfile and
+      # scan below is the authoritative Java dependency scan, it reads concrete library
+      # versions from the built fat jar, so this fs pass covers the npm lockfile and
       # any explicitly-versioned pom deps without needing the network.
       - name: Trivy filesystem scan (deps)
         id: fs
@@ -129,7 +129,7 @@ jobs:
       - name: Build image
         run: docker build -t othello:ci .
 
-      # (b) Image scan — OS (Alpine) + bundled-library CVEs in the runtime image.
+      # (b) Image scan, OS (Alpine) + bundled-library CVEs in the runtime image.
       - name: Trivy image scan
         id: image
         continue-on-error: true
@@ -148,7 +148,7 @@ jobs:
             trivy-image.sarif
           if-no-files-found: warn
 
-      # Security-tab uploads — gated off by default (see the semgrep job note).
+      # Security-tab uploads, gated off by default (see the semgrep job note).
       - name: Upload fs SARIF to the Security tab (requires GitHub Advanced Security)
         if: ${{ always() && vars.ENABLE_GHAS_UPLOAD == 'true' }}
         uses: github/codeql-action/upload-sarif@v3
@@ -168,8 +168,8 @@ jobs:
       - name: Gate on CRITICAL/HIGH
         if: always()
         run: |
-          echo "Trivy outcomes — fs: ${{ steps.fs.outcome }}, image: ${{ steps.image.outcome }}"
+          echo "Trivy outcomes, fs: ${{ steps.fs.outcome }}, image: ${{ steps.image.outcome }}"
           if [ "${{ steps.fs.outcome }}" = "failure" ] || [ "${{ steps.image.outcome }}" = "failure" ]; then
-            echo "::error::Trivy found fixable CRITICAL/HIGH CVEs — see the trivy-sarif artifact"
+            echo "::error::Trivy found fixable CRITICAL/HIGH CVEs, see the trivy-sarif artifact"
             exit 1
           fi

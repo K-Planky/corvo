@@ -41,8 +41,8 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 /**
  * M11.2 acceptance (spec §15): the opponent-disconnect policy. A real STOMP disconnect fires {@code
  * OPPONENT_DISCONNECTED} and arms a grace timer; a reconnect within grace fires {@code
- * OPPONENT_RECONNECTED} and resumes the game untouched; a lapse forfeits the absent player — a rated
- * win for the present player (the documented policy) — and pushes {@code GAME_OVER}. The background
+ * OPPONENT_RECONNECTED} and resumes the game untouched; a lapse forfeits the absent player, a rated
+ * win for the present player (the documented policy), and pushes {@code GAME_OVER}. The background
  * sweep is disabled suite-wide (pom Surefire {@code pvp.disconnect.scheduler-enabled=false}); the lapse
  * is driven deterministically via {@link DisconnectPolicyService#sweep(Instant)} with a {@code now}
  * past the armed deadline, so no test sleeps on the real grace window.
@@ -87,7 +87,7 @@ class OpponentDisconnectPolicyTest {
     @Test
     void reconnectWithinGraceResumesTheGame() throws Exception {
         Account alice = register("alice"); // Black
-        Account bob = register("bob"); // White — the player who stays
+        Account bob = register("bob"); // White, the player who stays
         UUID gameId = newPvpGame(alice.id(), bob.id());
 
         // Bob stays connected and subscribed, so he sees the presence events on the game topic.
@@ -104,15 +104,15 @@ class OpponentDisconnectPolicyTest {
         connect(alice.token());
         assertThat(pollUntilType(bobTopic, "OPPONENT_RECONNECTED")).isNotNull();
 
-        // Even a sweep well past the (now-cancelled) deadline must not forfeit — the game resumes.
+        // Even a sweep well past the (now-cancelled) deadline must not forfeit, the game resumes.
         disconnectPolicy.sweep(Instant.now().plusSeconds(3600));
         assertThat(games.findById(gameId).orElseThrow().getStatus()).isEqualTo(GameStatus.IN_PROGRESS);
     }
 
     @Test
     void graceLapseForfeitsTheAbsentPlayerAsARatedWin() throws Exception {
-        Account alice = register("alice"); // Black — the one who disconnects
-        Account bob = register("bob"); // White — the present player, wins on the lapse
+        Account alice = register("alice"); // Black, the one who disconnects
+        Account bob = register("bob"); // White, the present player, wins on the lapse
         UUID gameId = newPvpGame(alice.id(), bob.id());
 
         StompSession bobSession = connect(bob.token());

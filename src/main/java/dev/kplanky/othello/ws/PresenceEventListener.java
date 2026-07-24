@@ -15,7 +15,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
  * has authenticated a {@code CONNECT} and pinned a {@link StompPrincipal}; a {@link
  * SessionDisconnectEvent} fires when a session's socket closes (a clean {@code DISCONNECT} or a dropped
  * transport). We track sessions per user and only invoke the policy on a real online/offline
- * <em>transition</em> — the first session in makes a user online (cancelling any grace timer they own),
+ * <em>transition</em>, the first session in makes a user online (cancelling any grace timer they own),
  * the last session out makes them offline (arming the grace timer). Multiple tabs therefore don't
  * spuriously trip the policy.
  */

@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * M2.2 acceptance (spec §5, signed-storage caveat): a 64-bit bitboard can set bit 63 (square h8),
  * which exceeds {@code 2^63 - 1}. Java {@code long} and Postgres {@code BIGINT} are both signed
- * two's-complement, so the value round-trips exactly — it just shows up as a <em>negative</em>
+ * two's-complement, so the value round-trips exactly, it just shows up as a <em>negative</em>
  * number in the database. This test proves the round-trip is lossless <em>and</em> that the stored
  * value really is negative (read back through raw JDBC, bypassing the ORM).
  */

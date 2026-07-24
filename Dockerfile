@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Multi-stage build for the Othello server (spec §12/§13). The thin React client is built and
 # bundled into the Spring jar's static resources, so a SINGLE image serves the API and the SPA
-# same-origin (the reverse proxy is then just TLS termination — see Caddyfile/compose.prod.yaml).
+# same-origin (the reverse proxy is then just TLS termination, see Caddyfile/compose.prod.yaml).
 # The Node + JDK build stages are discarded; only the slim Alpine JRE runtime ships, and that final
 # image is what Trivy's image scan inspects.
 

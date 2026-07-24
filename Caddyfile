@@ -1,7 +1,7 @@
 # Reverse proxy + automatic HTTPS (spec §13). Caddy provisions a Let's Encrypt certificate for
 # {$DOMAIN} on first start (port 80/443 must be reachable from the internet for the ACME challenge)
-# and proxies every request — SPA shell, /api, /health, and the M8 /ws WebSocket (reverse_proxy
-# upgrades Connection/Upgrade transparently) — to the Spring app on the internal network.
+# and proxies every request, SPA shell, /api, /health, and the M8 /ws WebSocket (reverse_proxy
+# upgrades Connection/Upgrade transparently), to the Spring app on the internal network.
 {$DOMAIN} {
 	encode zstd gzip
 	reverse_proxy app:8080

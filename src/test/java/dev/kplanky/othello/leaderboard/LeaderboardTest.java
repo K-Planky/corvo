@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * M7.2 acceptance (spec §8/§9): the leaderboard is built by the Postgres window-function query —
+ * M7.2 acceptance (spec §8/§9): the leaderboard is built by the Postgres window-function query,
  * correct {@code RANK} ordering (ties share a rank), {@code PERCENT_RANK} oriented higher = better
  * (not shipped inverted), filtered to {@code games_played > 0}, and readable without auth.
  */
@@ -73,7 +73,7 @@ class LeaderboardTest {
         seed("bob", 1500, 3);
         seed("carol", 1500, 2); // tie with bob
         seed("dave", 1400, 1);
-        seed("erin", 2000, 0); // highest rating but no games — excluded by games_played > 0
+        seed("erin", 2000, 0); // highest rating but no games, excluded by games_played > 0
 
         List<LeaderboardEntry> board = leaderboard.leaderboard();
 
@@ -87,7 +87,7 @@ class LeaderboardTest {
         assertThat(List.of(board.get(1).username(), board.get(2).username()))
                 .containsExactlyInAnyOrder("bob", "carol");
 
-        // RANK(): 1, 2, 2, 4 — the tie shares rank 2 and the next rank skips to 4.
+        // RANK(): 1, 2, 2, 4, the tie shares rank 2 and the next rank skips to 4.
         assertThat(board.get(0).rank()).isEqualTo(1);
         assertThat(board.get(1).rank()).isEqualTo(2);
         assertThat(board.get(2).rank()).isEqualTo(2);

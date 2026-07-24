@@ -64,7 +64,7 @@ const OPENING: GameState = {
 };
 
 // State the move POST returns after Black plays d3 (19): the placement plus the flipped d4 (27). It
-// is now the bot's (White) turn — the response carries only the human's move (no synchronous reply).
+// is now the bot's (White) turn, the response carries only the human's move (no synchronous reply).
 const AFTER_HUMAN_D3: GameState = {
   ...OPENING,
   cells: (() => {
@@ -86,7 +86,7 @@ const AFTER_BOT_REPLY: GameState = {
   cells: (() => {
     const c = AFTER_HUMAN_D3.cells.split('');
     c[20] = 'W'; // some bot placement
-    c[19] = 'W'; // (illustrative flip — the client only renders what it's told)
+    c[19] = 'W'; // (illustrative flip, the client only renders what it's told)
     return c.join('');
   })(),
   currentTurn: 'BLACK',
@@ -125,7 +125,7 @@ describe('GameView', () => {
     expect(screen.getByText('4')).toBeInTheDocument();
 
     // The bot's reply arrives over the socket immediately after the human move, but is staged behind
-    // its animation window — synchronously after the push the board must NOT have jumped to it yet.
+    // its animation window, synchronously after the push the board must NOT have jumped to it yet.
     act(() => pushEvent({ type: 'MOVE_MADE', state: AFTER_BOT_REPLY }));
     expect(screen.queryByText('Your move')).not.toBeInTheDocument();
 
@@ -154,7 +154,7 @@ describe('GameView', () => {
     act(() => pushEvent({ type: 'MOVE_MADE', state: AFTER_BOT_REPLY }));
     expect(screen.getAllByText('2')).toHaveLength(2);
 
-    // POST resolves: the human-move state shows first — Black 4, bot's turn — not the bot reply.
+    // POST resolves: the human-move state shows first, Black 4, bot's turn, not the bot reply.
     await act(async () => resolveMove(AFTER_HUMAN_D3));
     await waitFor(() => expect(screen.getByText('Bot is thinking…')).toBeInTheDocument());
     expect(screen.getByText('4')).toBeInTheDocument();
@@ -178,7 +178,7 @@ describe('GameView', () => {
     );
 
     // vs-AI has no clocks/disconnect, so a terminal is never a forfeit even when it lands at an
-    // unchanged moveCount — the plain win copy, not "opponent forfeited".
+    // unchanged moveCount, the plain win copy, not "opponent forfeited".
     await waitFor(() => expect(screen.getByText('You win! 🎉')).toBeInTheDocument());
     expect(screen.queryByText(/forfeit/i)).not.toBeInTheDocument();
     expect(screen.getByText('40')).toBeInTheDocument(); // final disc count from the push
@@ -186,7 +186,7 @@ describe('GameView', () => {
 
   it('re-GETs authoritative state on a socket reconnect, catching a move missed during the gap', async () => {
     // The socket dropped and reconnected; a move (the bot's reply, moveCount 2) was applied while it
-    // was down and its push missed. On reconnect the client re-GETs state — the board must catch up to
+    // was down and its push missed. On reconnect the client re-GETs state, the board must catch up to
     // it purely from the fetch, no push involved (spec §15 reconnect: GET current state + re-subscribe).
     vi.mocked(getGame).mockResolvedValue(AFTER_BOT_REPLY);
     render(<GameView initial={OPENING} user={USER} onExit={() => {}} />);
@@ -195,7 +195,7 @@ describe('GameView', () => {
     await act(async () => reconnect());
 
     await waitFor(() => expect(getGame).toHaveBeenCalledWith('g1'));
-    // Both scores read 3 (AFTER_BOT_REPLY) — the board caught up from the re-fetch, and it's the
+    // Both scores read 3 (AFTER_BOT_REPLY), the board caught up from the re-fetch, and it's the
     // human's turn again, all from GET rather than a push.
     await waitFor(() => expect(screen.getByText('Your move')).toBeInTheDocument());
     expect(screen.getAllByText('3')).toHaveLength(2);

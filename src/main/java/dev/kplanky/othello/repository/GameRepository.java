@@ -13,7 +13,7 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
 
     /**
      * The caller's games (those they play either side of), newest first, optionally filtered by
-     * {@code status} — pass {@code null} for all statuses. Backs {@code GET /api/games?status=…} (§9).
+     * {@code status}, pass {@code null} for all statuses. Backs {@code GET /api/games?status=…} (§9).
      */
     @Query("select g from Game g where (g.blackPlayerId = :userId or g.whitePlayerId = :userId) "
             + "and (:status is null or g.status = :status) order by g.updatedAt desc")
@@ -21,7 +21,7 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
 
     /**
      * Whether {@code userId} plays either side of game {@code gameId}. Backs WebSocket topic
-     * authorization (§9/§10) — a non-participant may not subscribe to a game's push topic — without
+     * authorization (§9/§10), a non-participant may not subscribe to a game's push topic, without
      * loading the whole {@link Game}. A non-existent game yields {@code false}.
      */
     @Query("select count(g) > 0 from Game g where g.id = :gameId "
@@ -29,7 +29,7 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
     boolean isParticipant(@Param("gameId") UUID gameId, @Param("userId") UUID userId);
 
     /**
-     * Ids of in-progress, clocked PvP games — the candidates the turn-clock sweep checks for a timeout
+     * Ids of in-progress, clocked PvP games, the candidates the turn-clock sweep checks for a timeout
      * (spec §15, M10). Id-only so the sweep re-reads each in its own transaction; {@code turnStartedAt
      * is not null} excludes vs-AI (unclocked) games. At this project's single-instance scale scanning
      * all active PvP games each tick is cheap; a persisted indexed deadline would be the scale upgrade.
@@ -40,7 +40,7 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
     List<UUID> findActiveClockedPvpGameIds();
 
     /**
-     * Ids of {@code userId}'s in-progress PvP games — the games a disconnect-grace timer is armed for
+     * Ids of {@code userId}'s in-progress PvP games, the games a disconnect-grace timer is armed for
      * when their WebSocket drops (spec §15, M11.2). Id-only so each is re-read and resolved in its own
      * transaction, matching {@link #findActiveClockedPvpGameIds}.
      */

@@ -61,7 +61,7 @@ class IterativeDeepeningSearchTest {
         var progress = new IterativeDeepeningSearch<>(rules, evaluator, ordering, alwaysOut, 8)
                 .deepen(initial);
 
-        // Depth 1 runs uninterruptibly, so we still get a legal, depth-1-optimal move — and nothing
+        // Depth 1 runs uninterruptibly, so we still get a legal, depth-1-optimal move, and nothing
         // deeper (depth 2 is abandoned before it starts).
         assertThat(progress.completedDepth()).isEqualTo(1);
         assertThat(rules.getLegalMoves(initial)).contains(progress.move());
@@ -78,7 +78,7 @@ class IterativeDeepeningSearchTest {
         int previousDepth = 0;
         boolean sawAnIntermediateDepth = false;
         for (int budget : new int[] {0, 3, 12, 60, 300, 5000, Integer.MAX_VALUE}) {
-            // Out of time after `budget` polls — a deterministic stand-in for the wall clock.
+            // Out of time after `budget` polls, a deterministic stand-in for the wall clock.
             BooleanSupplier outOfTime = afterNCalls(budget);
             var progress = new IterativeDeepeningSearch<>(rules, evaluator, ordering, outOfTime, maxDepth)
                     .deepen(state);
@@ -87,7 +87,7 @@ class IterativeDeepeningSearchTest {
             assertThat(depth).as("deepening is monotonic in the budget").isGreaterThanOrEqualTo(previousDepth);
             assertThat(depth).isBetween(1, maxDepth);
             assertThat(rules.getLegalMoves(state)).contains(progress.move());
-            // The crux: the returned move is optimal for its *completed* depth — never a partial,
+            // The crux: the returned move is optimal for its *completed* depth, never a partial,
             // suboptimal result leaked from the aborted next depth.
             assertThat(moveValue(state, progress.move(), depth))
                     .as("move is optimal at the last completed depth %d", depth)
@@ -114,7 +114,7 @@ class IterativeDeepeningSearchTest {
 
         assertThat(ordered).first().isEqualTo(hint);
         assertThat(ordered).containsExactlyInAnyOrderElementsOf(moves); // a permutation
-        // A hint that isn't among the moves is a no-op — falls through to the base ordering.
+        // A hint that isn't among the moves is a no-op, falls through to the base ordering.
         assertThat(MoveOrdering.hintFirst(OthelloMove.at(5), ordering).order(null, moves))
                 .isEqualTo(ordering.order(null, moves));
     }

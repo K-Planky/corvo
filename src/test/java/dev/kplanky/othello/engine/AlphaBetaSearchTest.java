@@ -12,10 +12,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Alpha-beta pruning (spec §7, M6 rung 3) — the two AI-engine tests the spec names for this rung,
- * both measured against rung 2 ({@link NegamaxSearch}): (1) <b>correctness</b> — alpha-beta returns
+ * Alpha-beta pruning (spec §7, M6 rung 3), the two AI-engine tests the spec names for this rung,
+ * both measured against rung 2 ({@link NegamaxSearch}): (1) <b>correctness</b>, alpha-beta returns
  * the same best move as full-width negamax for the same position+depth, across a hand-checked fixture
- * and a fuzz of random positions/depths; and (2) the <b>perf assertion</b> — alpha-beta evaluates
+ * and a fuzz of random positions/depths; and (2) the <b>perf assertion</b>, alpha-beta evaluates
  * <em>strictly fewer</em> nodes than negamax wherever the branching admits pruning. Negamax already
  * cross-checks itself against an independent textbook minimax, so matching negamax move-for-move
  * transitively pins alpha-beta to the true optimum.
@@ -24,7 +24,7 @@ class AlphaBetaSearchTest {
 
     private final OthelloRules rules = new OthelloRules();
 
-    /** Disc parity from {@code perspective}'s view — the same simple evaluator the negamax test uses. */
+    /** Disc parity from {@code perspective}'s view, the same simple evaluator the negamax test uses. */
     private static final Evaluator<OthelloState> PARITY =
             (state, perspective) -> state.count(perspective) - state.count(perspective.opponent());
 

@@ -7,8 +7,8 @@ import java.util.random.RandomGenerator;
 
 /**
  * Rung 1 of the Milestone-6 AI ladder: a {@link Search} that plays a uniformly random legal move.
- * It is the bot used by the single-player vertical slice (Milestone 4) — both for the bot's opening
- * move at game creation and (M4.3) for its synchronous reply — and the baseline the stronger
+ * It is the bot used by the single-player vertical slice (Milestone 4), both for the bot's opening
+ * move at game creation and (M4.3) for its synchronous reply, and the baseline the stronger
  * negamax/alpha-beta/iterative-deepening rungs are measured against later.
  *
  * <p>Stateless and thread-safe. The default constructor draws from {@link ThreadLocalRandom} at call
@@ -37,7 +37,7 @@ public final class RandomBot<S, M> implements Search<S, M> {
     public M bestMove(S state) {
         List<M> moves = rules.getLegalMoves(state);
         if (moves.isEmpty()) {
-            throw new IllegalStateException("no legal move available — the caller must pass");
+            throw new IllegalStateException("no legal move available, the caller must pass");
         }
         RandomGenerator source = rng != null ? rng : ThreadLocalRandom.current();
         return moves.get(source.nextInt(moves.size()));

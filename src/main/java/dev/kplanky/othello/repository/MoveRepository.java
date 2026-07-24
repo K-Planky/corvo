@@ -16,7 +16,7 @@ public interface MoveRepository extends JpaRepository<Move, UUID> {
     List<Move> findByGameIdOrderByMoveNumberAsc(UUID gameId);
 
     /**
-     * Deletes every move row of a game — the child rows must go before the {@code games} parent row,
+     * Deletes every move row of a game, the child rows must go before the {@code games} parent row,
      * since {@code moves.game_id} references it with no {@code ON DELETE CASCADE}. Returns the count
      * removed. Must run in a transaction (see {@code GameService.deleteGame}).
      */

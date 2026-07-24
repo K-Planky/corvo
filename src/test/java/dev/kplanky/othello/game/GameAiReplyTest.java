@@ -115,7 +115,7 @@ class GameAiReplyTest {
     @Test
     void botPassesWhenItHasNoLegalMove() {
         // Crafted live position: Black=a1,b1 ; White=c1. Black's only legal move is d1, which flips c1
-        // and wipes White off the board, leaving the bot (White) with no move — it must pass.
+        // and wipes White off the board, leaving the bot (White) with no move, it must pass.
         Game crafted = new Game();
         crafted.setOpponentType(OpponentType.HUMAN_VS_AI);
         crafted.setBotSide(BotSide.WHITE);

@@ -32,7 +32,7 @@ import org.springframework.context.annotation.Import;
  * M4.2 acceptance (spec §4/§9/§11): a single transactional move keeps the persisted board, the
  * {@link Move} row, and {@code moveCount} mutually consistent; driving a game to a terminal state
  * sets {@code status}/{@code winnerId}. vs-AI is unrated practice (§8), so a terminal bot game records
- * no W/L/D or Elo — the competitive record is exercised by the PvP tests.
+ * no W/L/D or Elo, the competitive record is exercised by the PvP tests.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -73,7 +73,7 @@ class GameMoveServiceTest {
     @Test
     void appliesLegalMoveConsistentlyWithinOneTransaction() {
         // Human plays Black (bot White), so the freshly created game is Black-to-move at the initial
-        // position — no AI reply yet (that arrives in M4.3).
+        // position, no AI reply yet (that arrives in M4.3).
         UUID gameId = gameService.createVsAiGame(humanId, BotDifficulty.EASY, BotSide.WHITE).id();
         OthelloState initial = OthelloState.initial();
         OthelloMove move = rules.getLegalMoves(initial).get(0);
@@ -133,7 +133,7 @@ class GameMoveServiceTest {
         }
 
         // vs-AI is unrated practice (spec §8): the game resolves (status/winnerId above) but records no
-        // competitive result — W/L/D and games-played stay zero.
+        // competitive result, W/L/D and games-played stay zero.
         User human = users.findById(humanId).orElseThrow();
         assertThat(human.getGamesPlayed()).isZero();
         assertThat(human.getWins() + human.getLosses() + human.getDraws()).isZero();

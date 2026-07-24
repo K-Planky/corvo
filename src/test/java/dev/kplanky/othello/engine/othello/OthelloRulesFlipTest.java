@@ -174,7 +174,7 @@ class OthelloRulesFlipTest {
     void westWalkDoesNotWrapOffTheLeftEdge() {
         // Row 1: b1..h1 White, a1 Black. Land at a2 (square 8). A naive west shift of a2 (>>>1)
         // lands on h1, so an unmasked west-walk would wrap into row 1 and bracket b1..h1 against
-        // the a1 Black anchor — flipping the whole row. With NOT_H_FILE masking, west(a2) = 0, so
+        // the a1 Black anchor, flipping the whole row. With NOT_H_FILE masking, west(a2) = 0, so
         // nothing flips.
         long white = 0L;
         for (int col = 1; col <= 7; col++) {
@@ -206,7 +206,7 @@ class OthelloRulesFlipTest {
         // a3 b4 White on the NE diagonal, c5 Black. Land at h1 (square 7). A naive NE shift of h1
         // (<<9) lands on a3 (square 16), so an unmasked NE-walk would wrap off the right edge into
         // the a3..b4 run and bracket it against c5. With NOT_A_FILE masking, northeast(h1) = 0, so
-        // nothing flips — closing the no-wrap claim on a diagonal direction too.
+        // nothing flips, closing the no-wrap claim on a diagonal direction too.
         long white = bit(2 * 8 + 0) | bit(3 * 8 + 1); // a3, b4
         long black = bit(4 * 8 + 2);                   // c5
         OthelloState state = blackToMove(black, white);

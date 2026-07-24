@@ -75,7 +75,7 @@ describe('Lobby matchmaking', () => {
     expect(screen.getByText(/waiting for an opponent/i)).toBeInTheDocument();
 
     await act(async () => {
-      ready(); // the socket connected — now the queue join fires.
+      ready(); // the socket connected, now the queue join fires.
     });
     expect(joinQueue).toHaveBeenCalledTimes(1);
   });
@@ -110,7 +110,7 @@ describe('Lobby matchmaking', () => {
     await waitFor(() => expect(onOpenGame).toHaveBeenCalledWith(matched));
     expect(getGame).toHaveBeenCalledWith('g-sync');
 
-    // The joiner also receives a MATCH_FOUND push for the same game — it must not open a second time.
+    // The joiner also receives a MATCH_FOUND push for the same game, it must not open a second time.
     act(() => pushEvent({ type: 'MATCH_FOUND', state: matched }));
     expect(onOpenGame).toHaveBeenCalledTimes(1);
   });
@@ -127,7 +127,7 @@ describe('Lobby matchmaking', () => {
       ready();
     });
     await waitFor(() => expect(getGame).toHaveBeenCalledWith('g-fetchfail'));
-    expect(onOpenGame).not.toHaveBeenCalled(); // fetch failed — not aborted, still waiting on the push.
+    expect(onOpenGame).not.toHaveBeenCalled(); // fetch failed, not aborted, still waiting on the push.
 
     act(() => pushEvent({ type: 'MATCH_FOUND', state: matched }));
     expect(onOpenGame).toHaveBeenCalledWith(matched);
@@ -150,7 +150,7 @@ describe('Lobby matchmaking', () => {
     });
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    // The join resolves MATCHED only now — after the cancel; it must not yank the user into a game.
+    // The join resolves MATCHED only now, after the cancel; it must not yank the user into a game.
     await act(async () => {
       resolveJoin({ status: 'MATCHED', gameId: 'g-late' });
     });
@@ -186,7 +186,7 @@ describe('Lobby matchmaking', () => {
   });
 });
 
-describe('Lobby Resume — delete', () => {
+describe('Lobby Resume, delete', () => {
   it('deletes a single-player game after confirmation and removes its row', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(listGames).mockResolvedValue([makeAiGame('g1')]);
@@ -198,7 +198,7 @@ describe('Lobby Resume — delete', () => {
 
     expect(confirm).toHaveBeenCalled();
     await waitFor(() => expect(deleteGame).toHaveBeenCalledWith('g1'));
-    // The row is gone — with no games left, the Resume card disappears too.
+    // The row is gone, with no games left, the Resume card disappears too.
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /delete match/i })).not.toBeInTheDocument(),
     );

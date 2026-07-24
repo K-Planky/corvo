@@ -13,7 +13,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * A registered player (spec §5). Holds credentials, the real Elo rating, and denormalized W/L/D
- * counters. Bots are <em>not</em> users — they live as an enum on {@link Game} (§5).
+ * counters. Bots are <em>not</em> users, they live as an enum on {@link Game} (§5).
  *
  * <p>Mapped to table {@code users} ({@code user} is a reserved word in Postgres). Maps against the
  * Flyway-managed schema in {@code V2__core_schema.sql} with {@code ddl-auto=validate}.

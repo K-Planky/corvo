@@ -1,13 +1,13 @@
-# Continuous deployment (spec §12/§13). Runs ONLY after the CI workflow succeeds on main — so the
-# Semgrep + Trivy gates actually block a bad build from shipping — then builds & pushes the app
+# Continuous deployment (spec §12/§13). Runs ONLY after the CI workflow succeeds on main, so the
+# Semgrep + Trivy gates actually block a bad build from shipping, then builds & pushes the app
 # image to GHCR and pull-and-restarts the stack on the VM over SSH. Flyway migrations run on app
 # startup, so restarting the app applies any new migrations.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
-#   DEPLOY_HOST     — VM public IP or hostname
-#   DEPLOY_USER     — non-root deploy user on the VM (in the docker group)
-#   DEPLOY_SSH_KEY  — private SSH key whose public half is in that user's authorized_keys
-# The VM must already be logged in to GHCR (read-only PAT) so it can pull the private image —
+#   DEPLOY_HOST    , VM public IP or hostname
+#   DEPLOY_USER    , non-root deploy user on the VM (in the docker group)
+#   DEPLOY_SSH_KEY , private SSH key whose public half is in that user's authorized_keys
+# The VM must already be logged in to GHCR (read-only PAT) so it can pull the private image,
 # see the deploy runbook.
 name: Deploy
 

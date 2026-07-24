@@ -17,8 +17,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     /**
      * The leaderboard (spec §8): rank + percentile computed by Postgres window functions, not in app
      * code. Window functions aren't expressible in JPQL, so this is native SQL. {@code PERCENT_RANK()}
-     * over {@code DESC} gives the top player 0.0 — the opposite of the "95th percentile = elite"
-     * intuition — so it is inverted to {@code (1 - PERCENT_RANK()) * 100}, leaving the top player ≈ 100
+     * over {@code DESC} gives the top player 0.0, the opposite of the "95th percentile = elite"
+     * intuition, so it is inverted to {@code (1 - PERCENT_RANK()) * 100}, leaving the top player ≈ 100
      * (higher = better). Only players who have finished a game appear; capped at the top 100.
      */
     @Query(

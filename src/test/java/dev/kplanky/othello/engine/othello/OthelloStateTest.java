@@ -12,7 +12,7 @@ class OthelloStateTest {
     void initialPositionMatchesSpecDiagram() {
         OthelloState s = OthelloState.initial();
 
-        // Black at 28 (e4) and 35 (d5); White at 27 (d4) and 36 (e5) — spec §6.
+        // Black at 28 (e4) and 35 (d5); White at 27 (d4) and 36 (e5), spec §6.
         assertThat(s.black()).isEqualTo((1L << 28) | (1L << 35));
         assertThat(s.white()).isEqualTo((1L << 27) | (1L << 36));
 

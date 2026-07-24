@@ -5,7 +5,7 @@ package dev.kplanky.othello.engine.othello;
  *
  * <p>A pass is represented by {@link #PASS_SQUARE} rather than a separate type so the move stays a
  * cheap value. Pass semantics (a player may pass only with zero legal moves) are enforced by the
- * rules engine, not by this type — see spec §6/§14.
+ * rules engine, not by this type, see spec §6/§14.
  */
 public record OthelloMove(int square) {
 

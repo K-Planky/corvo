@@ -30,8 +30,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * M4.6 acceptance (spec §11): optimistic locking on move application. A move submission that races
- * another on the same {@link Game} loses the {@code @Version} check and is rejected — surfaced as a
- * 409 ({@link ConcurrentMoveException}) through the service — while the board is left exactly as the
+ * another on the same {@link Game} loses the {@code @Version} check and is rejected, surfaced as a
+ * 409 ({@link ConcurrentMoveException}) through the service, while the board is left exactly as the
  * winning move set it (the loser's transaction rolls back; no corruption).
  *
  * <p>Not {@code @Transactional}: each writer needs its own committed transaction, so the test drives
@@ -87,7 +87,7 @@ class GameConcurrencyTest {
 
     @Test
     void staleVersionWriteIsRejectedAndBoardSurvives() throws Exception {
-        // Two transactions both read version 0, then one commits before the other writes — the late
+        // Two transactions both read version 0, then one commits before the other writes, the late
         // writer's UPDATE matches 0 rows (version moved on) and Hibernate raises the optimistic-lock
         // failure. Fully deterministic via latches; no timing assumptions.
         long winnerBoard = 0x00000000000000FFL;
@@ -178,7 +178,7 @@ class GameConcurrencyTest {
     }
 
     /**
-     * Blocks until exactly the racer is waiting on a row lock — an {@code active} backend parked on a
+     * Blocks until exactly the racer is waiting on a row lock, an {@code active} backend parked on a
      * {@code Lock} wait event (the holder sits {@code idle in transaction}, so it doesn't match). This
      * proves the racer already read version 0 and is stalled at its flush, making the conflict
      * deterministic without a timing guess.

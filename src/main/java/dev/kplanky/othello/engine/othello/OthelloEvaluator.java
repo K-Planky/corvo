@@ -4,22 +4,22 @@ import dev.kplanky.othello.engine.Evaluator;
 import dev.kplanky.othello.engine.Player;
 
 /**
- * Phase-aware Othello position evaluation (spec §7, M6 rung 4 — "the centerpiece"). A weighted sum
+ * Phase-aware Othello position evaluation (spec §7, M6 rung 4, "the centerpiece"). A weighted sum
  * of features scored from a {@code perspective}'s point of view, with the weights of two of them
  * <b>shifting by game phase</b> (how full the board is):
  *
  * <ul>
- *   <li><b>Corner occupancy</b> — a large, near-constant bonus per corner held. Corners can never be
+ *   <li><b>Corner occupancy</b>, a large, near-constant bonus per corner held. Corners can never be
  *       flipped, so owning one is permanent territory.</li>
- *   <li><b>Corner-adjacency penalty</b> — occupying a square next to an <em>empty</em> corner is
+ *   <li><b>Corner-adjacency penalty</b>, occupying a square next to an <em>empty</em> corner is
  *       dangerous because it tends to hand the corner to the opponent. The diagonal
  *       <em>X-squares</em> are the worst; the orthogonal <em>C-squares</em> are bad but less so. The
- *       penalty applies only while the corner is still empty — once the corner is settled the
+ *       penalty applies only while the corner is still empty, once the corner is settled the
  *       adjacent squares are ordinary.</li>
- *   <li><b>Mobility</b> — how many legal moves a side has. It dominates the opening/midgame:
+ *   <li><b>Mobility</b>, how many legal moves a side has. It dominates the opening/midgame:
  *       restricting the opponent's options is how you steer the game. Its weight <em>fades</em> as
  *       the board fills.</li>
- *   <li><b>Disc parity</b> — the raw disc-count difference. Early leads routinely flip, so it barely
+ *   <li><b>Disc parity</b>, the raw disc-count difference. Early leads routinely flip, so it barely
  *       matters in the opening; in the endgame it is what actually decides the result, so its weight
  *       <em>grows</em> toward the full board.</li>
  * </ul>
@@ -28,8 +28,8 @@ import dev.kplanky.othello.engine.Player;
  * dominates the endgame</em>, and the weights interpolate linearly between the two by disc count.
  *
  * <p>The score is built entirely from integer features and phase weights that depend only on the
- * board's fill (not on {@code perspective}), so it is exactly antisymmetric —
- * {@code evaluate(s, BLACK) == -evaluate(s, WHITE)} — the zero-sum convention the negamax/alpha-beta
+ * board's fill (not on {@code perspective}), so it is exactly antisymmetric,
+ * {@code evaluate(s, BLACK) == -evaluate(s, WHITE)}, the zero-sum convention the negamax/alpha-beta
  * search relies on. There is no special terminal branch: a finished board is simply the extreme of
  * the endgame phase, where the dominant parity weight already scores a win high and a loss low.
  */
@@ -37,9 +37,9 @@ public final class OthelloEvaluator implements Evaluator<OthelloState> {
 
     /** Per-corner bonus (also counted in parity, so a corner is worth corner + parity weight). */
     private static final int CORNER_WEIGHT = 80;
-    /** Penalty for sitting on an X-square (diagonal to an empty corner) — the most dangerous. */
+    /** Penalty for sitting on an X-square (diagonal to an empty corner), the most dangerous. */
     private static final int X_SQUARE_PENALTY = 24;
-    /** Penalty for sitting on a C-square (orthogonal to an empty corner) — bad, but less so. */
+    /** Penalty for sitting on a C-square (orthogonal to an empty corner), bad, but less so. */
     private static final int C_SQUARE_PENALTY = 8;
 
     // Phase-shifting weights, linearly interpolated by disc count from opening (4 discs) to a full
@@ -55,7 +55,7 @@ public final class OthelloEvaluator implements Evaluator<OthelloState> {
 
     /** The four corner squares (a1, h1, a8, h8), indexed {@code row*8+col}. */
     private static final int[] CORNER = {0, 7, 56, 63};
-    /** The four corners as a single mask — derived from {@link #CORNER} so there is one source of truth. */
+    /** The four corners as a single mask, derived from {@link #CORNER} so there is one source of truth. */
     private static final long CORNER_MASK = maskOf(CORNER);
     /** The X-square (diagonal neighbour) of {@link #CORNER}[i]: b2, g2, b7, g7. */
     private static final int[] X_SQUARE = {9, 14, 49, 54};
@@ -98,7 +98,7 @@ public final class OthelloEvaluator implements Evaluator<OthelloState> {
         int penalty = 0;
         for (int i = 0; i < CORNER.length; i++) {
             if ((empty & sq(CORNER[i])) == 0L) {
-                continue; // corner already settled — the adjacent squares are no longer dangerous
+                continue; // corner already settled, the adjacent squares are no longer dangerous
             }
             if ((discs & sq(X_SQUARE[i])) != 0L) {
                 penalty += X_SQUARE_PENALTY;
@@ -121,7 +121,7 @@ public final class OthelloEvaluator implements Evaluator<OthelloState> {
     /**
      * Linear interpolation from {@code opening} (at {@value #OPENING_DISCS} discs) to {@code endgame}
      * (at {@value #FULL_BOARD_DISCS} discs), clamped outside that range. Integer arithmetic only, so
-     * the result depends solely on {@code filled} — never on which side is the perspective — which is
+     * the result depends solely on {@code filled}, never on which side is the perspective, which is
      * what keeps {@link #evaluate} exactly antisymmetric.
      */
     private static int lerpByPhase(int opening, int endgame, int filled) {

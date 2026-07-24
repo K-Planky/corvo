@@ -1,4 +1,4 @@
-// Top-level screen switch: Auth → Lobby → Game. State is intentionally tiny — the server is
+// Top-level screen switch: Auth → Lobby → Game. State is intentionally tiny, the server is
 // authoritative, so the client only tracks who's signed in and which game (if any) is open. The one
 // bit of client-only truth is *which screen you're on* (lobby vs a board): the server can't tell a
 // vs-AI game you've left to the lobby from one you're still watching, since both stay IN_PROGRESS. We
@@ -12,7 +12,7 @@ import { getGame, getToken, listGames, logout, me } from './api';
 import type { GameState, User } from './types';
 
 // Per-tab marker for the board the user currently has open. sessionStorage (not localStorage) so it
-// survives a refresh but not a fresh session — reopening the app later lands in the lobby, not back
+// survives a refresh but not a fresh session, reopening the app later lands in the lobby, not back
 // in an old game. A live PvP match is restored from server state regardless (see the boot effect).
 const ACTIVE_GAME_KEY = 'othello.activeGame';
 
@@ -44,7 +44,7 @@ export default function App() {
         if (!active) return;
         setUser(u);
         // Restore the screen the user was on before the refresh. A live PvP match is inescapable, so
-        // it's always reopened from server state — even in a tab with no marker (e.g. storage cleared
+        // it's always reopened from server state, even in a tab with no marker (e.g. storage cleared
         // mid-match). Otherwise reopen only the board this tab had open (the marker), and only if it's
         // still in progress; a game left to the lobby has no marker, so we stay in the lobby.
         try {
@@ -63,7 +63,7 @@ export default function App() {
           const full = await getGame(pick.id);
           if (active) openGame(full);
         } catch {
-          // Lookup failed — fall through to the lobby without disturbing the marker.
+          // Lookup failed, fall through to the lobby without disturbing the marker.
         }
       })
       // Token missing/expired/invalid: drop it and fall back to the sign-in screen.
@@ -97,7 +97,7 @@ export default function App() {
           onExit={() => {
             closeGame();
             // A finished game changed our Elo server-side; re-read it so the lobby shows the new
-            // rating without a reload. Best-effort — a failure just leaves the prior value on screen.
+            // rating without a reload. Best-effort, a failure just leaves the prior value on screen.
             me().then(setUser).catch(() => {});
           }}
         />

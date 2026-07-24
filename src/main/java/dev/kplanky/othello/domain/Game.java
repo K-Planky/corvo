@@ -18,10 +18,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 /**
  * A single game (spec §5). The current position is stored denormalized as two bitboards
  * ({@code boardBlack}/{@code boardWhite}, see §5 board representation) for O(1) load, while the full
- * {@link Move} list enables replay/resume — the redundancy is intentional.
+ * {@link Move} list enables replay/resume, the redundancy is intentional.
  *
  * <p>Player references are stored as nullable {@code UUID} columns ({@code null} when that side is a
- * bot — bots have no {@code User} row). {@code winnerId} is set only to a winning human; it stays
+ * bot, bots have no {@code User} row). {@code winnerId} is set only to a winning human; it stays
  * {@code null} when a bot wins, so {@code status} is the authoritative outcome (Appendix C, A1).
  *
  * <p>{@code version} is the optimistic lock guarding concurrent move application (§11).
@@ -101,7 +101,7 @@ public class Game {
     private Long whiteTimeMs;
 
     /**
-     * When the current side-to-move's clock started ticking (spec §15, M10) — set at PvP creation and
+     * When the current side-to-move's clock started ticking (spec §15, M10), set at PvP creation and
      * reset by every applied move. {@code null} for vs-AI games (which are never on a clock).
      */
     @Column(name = "turn_started_at")

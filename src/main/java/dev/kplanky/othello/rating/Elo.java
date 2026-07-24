@@ -2,7 +2,7 @@ package dev.kplanky.othello.rating;
 
 /**
  * Standard Elo rating arithmetic (spec §8). Pure: no persistence, no rounding surprises hidden in a
- * service — so it is trivially unit-tested and reused by both the vs-AI path (only the human's rating
+ * service, so it is trivially unit-tested and reused by both the vs-AI path (only the human's rating
  * moves; the bot rating is fixed) and the symmetric PvP update (M9).
  *
  * <pre>
@@ -15,7 +15,7 @@ public final class Elo {
     /** K-factor: 32 for fast convergence with a small playerbase (spec §8 / Appendix C). */
     public static final int K = 32;
 
-    /** Score for a win — feeds {@code S_a} in the update formula. */
+    /** Score for a win, feeds {@code S_a} in the update formula. */
     public static final double WIN = 1.0;
 
     /** Score for a draw. */

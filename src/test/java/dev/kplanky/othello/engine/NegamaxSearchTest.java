@@ -12,16 +12,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Negamax full-width search (spec §7, M6 rung 2). Two things are proven: (1) <b>correctness</b> —
+ * Negamax full-width search (spec §7, M6 rung 2). Two things are proven: (1) <b>correctness</b>,
  * negamax returns the same move as an independent textbook min/max reference across many positions
  * and depths, plus a hand-checked shallow fixture; and (2) the <b>node-count baseline</b> that the
- * next rung (alpha-beta) must beat — pinned on the initial position where the tree is hand-countable.
+ * next rung (alpha-beta) must beat, pinned on the initial position where the tree is hand-countable.
  */
 class NegamaxSearchTest {
 
     private final OthelloRules rules = new OthelloRules();
 
-    /** Disc parity from {@code perspective}'s view — a simple, exactly-reasoned-about evaluator. */
+    /** Disc parity from {@code perspective}'s view, a simple, exactly-reasoned-about evaluator. */
     private static final Evaluator<OthelloState> PARITY =
             (state, perspective) -> state.count(perspective) - state.count(perspective.opponent());
 
@@ -33,7 +33,7 @@ class NegamaxSearchTest {
 
     @Test
     void depthOneNegamaxPicksTheKnownOptimalMove() {
-        // Same fixture as the seam test: Black to move with exactly two legal moves —
+        // Same fixture as the seam test: Black to move with exactly two legal moves,
         //   a1 (square 0) flips 2 discs → parity +4;  f1 (square 5) flips 1 → parity +2.
         // A 1-ply negamax maximising parity must choose a1.
         long black = bit(3) | bit(7);            // d1, h1

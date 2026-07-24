@@ -25,8 +25,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
 /**
- * Deleting a game from the Resume list (M12.x). Deletion is intentionally narrow — only the caller's
- * own in-progress single-player game — so a multiplayer match (shared, rated) and a finished game
+ * Deleting a game from the Resume list (M12.x). Deletion is intentionally narrow, only the caller's
+ * own in-progress single-player game, so a multiplayer match (shared, rated) and a finished game
  * (rating history / applied Elo) are both refused. The child {@code moves} rows must go with the game.
  */
 @SpringBootTest

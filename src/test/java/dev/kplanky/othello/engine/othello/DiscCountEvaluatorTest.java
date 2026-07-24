@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The Easy tier's beginner's-eye evaluation (spec §7): the score is the raw disc difference and
- * nothing else — corners and trap squares are worth exactly one disc — and it keeps the zero-sum
+ * nothing else, corners and trap squares are worth exactly one disc, and it keeps the zero-sum
  * antisymmetry every evaluator in the engine promises.
  */
 class DiscCountEvaluatorTest {
@@ -34,7 +34,7 @@ class DiscCountEvaluatorTest {
     @Test
     void cornersAndTrapSquaresAreWorthExactlyOneDisc() {
         // The whole point of the beginner heuristic: a corner (a1) and the X-square next to it (b2)
-        // score identically to a quiet square (d3) — no positional judgement at all.
+        // score identically to a quiet square (d3), no positional judgement at all.
         OthelloState onCorner = new OthelloState(sq(0), sq(27), Player.BLACK, 0);
         OthelloState onXSquare = new OthelloState(sq(9), sq(27), Player.BLACK, 0);
         OthelloState onQuietSquare = new OthelloState(sq(19), sq(27), Player.BLACK, 0);

@@ -39,7 +39,7 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 /**
  * M11.1 acceptance (spec §15): a client that drops and reconnects renders correct current state purely
- * from {@code GET /api/games/{id}} plus a re-subscribe — no client resync. Because the board is
+ * from {@code GET /api/games/{id}} plus a re-subscribe, no client resync. Because the board is
  * server-authoritative in Postgres and the STOMP layer is stateless (auth per CONNECT, subscribe authz
  * re-checked per frame), a returning client just re-fetches state and re-subscribes: moves it missed
  * while its socket was down are already reflected in the GET, and live pushes resume on the new
@@ -84,7 +84,7 @@ class ReconnectTest {
 
     @Test
     void reconnectRendersCurrentStateFromGetThenResumesPushes() throws Exception {
-        Account alice = register("alice"); // Black — moves first
+        Account alice = register("alice"); // Black, moves first
         Account bob = register("bob"); // White
         UUID gameId = newPvpGame(alice.id(), bob.id(), OthelloState.initial());
 
@@ -100,20 +100,20 @@ class ReconnectTest {
         int whiteMove = firstLegal(bob.token(), gameId);
         postMove(bob.token(), gameId, "{\"position\":" + whiteMove + "}");
 
-        // Reconnect step: a plain GET returns the authoritative current state — the two missed moves are
+        // Reconnect step: a plain GET returns the authoritative current state, the two missed moves are
         // already reflected, oriented to Alice (it is her turn again, so her legal moves are present).
         JsonNode state = getState(alice.token(), gameId);
         assertThat(state.get("moveCount").asInt()).isEqualTo(2);
         assertThat(state.get("currentTurn").asText()).isEqualTo("BLACK");
         assertThat(state.get("legalMoves")).isNotEmpty();
-        // The board matches replaying the two known moves from the initial position — no client resync.
+        // The board matches replaying the two known moves from the initial position, no client resync.
         OthelloState expected = rules.applyMove(
                 rules.applyMove(OthelloState.initial(), OthelloMove.at(blackMove)),
                 OthelloMove.at(whiteMove));
         assertThat(state.get("boardBlack").asLong()).isEqualTo(expected.black());
         assertThat(state.get("boardWhite").asLong()).isEqualTo(expected.white());
 
-        // Re-subscribe on a fresh session; live pushes resume — a subsequent opponent move arrives.
+        // Re-subscribe on a fresh session; live pushes resume, a subsequent opponent move arrives.
         StompSession resumed = connect(alice.token());
         BlockingQueue<Map<String, Object>> resumedTopic = subscribe(resumed, gameId);
         postMove(alice.token(), gameId, "{\"position\":" + firstLegal(alice.token(), gameId) + "}");

@@ -81,11 +81,11 @@ async function errorMessage(res: Response): Promise<string> {
   }
   switch (res.status) {
     case 401:
-      return 'Your session has expired — please sign in again.';
+      return 'Your session has expired, please sign in again.';
     case 403:
       return "You're not a participant in this game.";
     case 409:
-      return "That move is no longer valid — it's not your turn.";
+      return "That move is no longer valid, it's not your turn.";
     case 422:
       return 'That move is illegal.';
     default:
@@ -121,7 +121,7 @@ export async function login(
 
 /** The signed-in user behind the stored token. Rehydrates a session on reload (the token persists in
  *  localStorage but the User object doesn't) and re-reads the current Elo after a game. A 401 means
- *  the token is gone/expired — callers clear it and show the sign-in screen. */
+ *  the token is gone/expired, callers clear it and show the sign-in screen. */
 export function me(): Promise<User> {
   return request<User>('/auth/me');
 }
@@ -164,7 +164,7 @@ export function joinQueue(): Promise<MatchmakingStatus> {
   return request<MatchmakingStatus>('/matchmaking/queue', { method: 'POST' });
 }
 
-/** Leave the matchmaking queue. Idempotent server-side — safe to call even if not currently queued. */
+/** Leave the matchmaking queue. Idempotent server-side, safe to call even if not currently queued. */
 export function leaveQueue(): Promise<void> {
   return request<void>('/matchmaking/queue', { method: 'DELETE' });
 }

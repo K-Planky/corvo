@@ -1,7 +1,7 @@
 # Production topology (spec §13): Spring app + Postgres + Caddy (auto-Let's-Encrypt reverse proxy).
 # The app image bundles the SPA, so the API and thin client are served same-origin; Caddy just
 # terminates HTTPS for ${DOMAIN} and proxies everything to the app (WebSocket upgrades pass through
-# transparently for M8). Secrets come from a VM-local .env (never committed) — see .env.prod.example.
+# transparently for M8). Secrets come from a VM-local .env (never committed), see .env.prod.example.
 #
 # Bring up on the VM:  docker compose -f compose.prod.yaml up -d
 services:
@@ -35,7 +35,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
     expose:
-      - "8080"          # internal only — reached via Caddy, never published to the host
+      - "8080"          # internal only, reached via Caddy, never published to the host
 
   caddy:
     image: caddy:2-alpine

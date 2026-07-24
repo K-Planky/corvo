@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The public leaderboard endpoint (spec §9). Auth is optional — anyone may read the top players — so
+ * The public leaderboard endpoint (spec §9). Auth is optional, anyone may read the top players, so
  * this route is permitted unauthenticated in {@code SecurityConfig}.
  */
 @RestController

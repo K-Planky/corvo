@@ -59,7 +59,7 @@ class WebSocketConnectAuthTest {
     @BeforeEach
     void setUp() throws Exception {
         // Clear the full FK child chain in order so this is order-independent under the shared
-        // Testcontainers Postgres (a game-creating WS test may run before this one) — see DECISIONS.
+        // Testcontainers Postgres (a game-creating WS test may run before this one), see DECISIONS.
         ratings.deleteAll();
         moves.deleteAll();
         games.deleteAll();

@@ -37,7 +37,7 @@ public class AuthController {
         return authService.login(request);
     }
 
-    /** The signed-in user behind the bearer token — used to rehydrate a session and re-read Elo. */
+    /** The signed-in user behind the bearer token, used to rehydrate a session and re-read Elo. */
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal JwtPrincipal principal) {
         return authService.me(principal.userId());

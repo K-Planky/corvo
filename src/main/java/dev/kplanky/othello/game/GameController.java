@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Game REST endpoints (spec §9). All require a valid JWT; the participant/turn anti-cheat is enforced
  * on move submission (M4.5). {@code POST .../moves} returns the state after the human's move only and
- * returns immediately — the bot's reply is computed off-thread and pushed over WebSocket (M8).
+ * returns immediately, the bot's reply is computed off-thread and pushed over WebSocket (M8).
  */
 @RestController
 @RequestMapping("/api/games")

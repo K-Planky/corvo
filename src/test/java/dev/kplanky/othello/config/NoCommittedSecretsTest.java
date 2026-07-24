@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 /**
- * M3.3 acceptance (spec §10/§13): the genuine secrets — the JWT signing key and the DB password —
+ * M3.3 acceptance (spec §10/§13): the genuine secrets, the JWT signing key and the DB password,
  * must be read from the environment with NO in-source default, so the committed build ships no
  * secret literal. (Semgrep's {@code p/secrets} ruleset enforces this more broadly in M5.)
  *
@@ -55,7 +55,7 @@ class NoCommittedSecretsTest {
     void secretBearingPropertiesContainNoLiteralValue() throws IOException {
         Properties properties = loadProperties();
         // Any property whose key hints at a credential must resolve from the environment, never hold
-        // a literal — guards against a future regression reintroducing an inline secret/default.
+        // a literal, guards against a future regression reintroducing an inline secret/default.
         for (String key : properties.stringPropertyNames()) {
             String lower = key.toLowerCase();
             if (lower.contains("password") || lower.contains("secret") || lower.endsWith(".key")) {

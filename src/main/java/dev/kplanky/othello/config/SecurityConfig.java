@@ -21,7 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *
  * <p>The public surface is {@code /health}, {@code /api/auth/register} + {@code /api/auth/login},
  * and the read-only {@code GET /api/leaderboard} and {@code GET /api/users/{id}/stats} (§9, auth
- * optional); every other request — including {@code GET /api/auth/me} — must carry a valid JWT,
+ * optional); every other request, including {@code GET /api/auth/me}, must carry a valid JWT,
  * verified by the {@link JwtAuthenticationFilter} which runs before the username/password filter and
  * populates the security context.
  */
@@ -45,7 +45,7 @@ public class SecurityConfig {
                         // exception (403/409/422 from the move anti-cheat) forwards to /error; because
                         // the session is STATELESS and the JWT filter is once-per-request (it skips
                         // error dispatches), that re-dispatch is unauthenticated and would otherwise be
-                        // overwritten with 401 by the entry point — masking the real status.
+                        // overwritten with 401 by the entry point, masking the real status.
                         .dispatcherTypeMatchers(DispatcherType.ERROR)
                         .permitAll()
                         // Only register + login are public; GET /api/auth/me reads the caller's own
@@ -57,13 +57,13 @@ public class SecurityConfig {
                         // (spec §9/§10), so a session never opens unauthenticated.
                         .requestMatchers("/ws/**")
                         .permitAll()
-                        // Public reads (spec §9, auth optional) — the leaderboard and a user's stats.
+                        // Public reads (spec §9, auth optional), the leaderboard and a user's stats.
                         .requestMatchers(HttpMethod.GET, "/api/leaderboard", "/api/users/*/stats")
                         .permitAll()
                         // SPA shell + assets are served same-origin by this app (spec §13) and must
                         // load before authentication; the API stays protected by anyRequest() below.
                         // No client-side router, so only the root, index.html, Vite's /assets/** and
-                        // a few root icons are served — not a catch-all.
+                        // a few root icons are served, not a catch-all.
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**",
                                 "/*.svg", "/*.png", "/*.ico", "/*.webmanifest")
                         .permitAll()

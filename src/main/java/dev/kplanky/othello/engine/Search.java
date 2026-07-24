@@ -16,8 +16,8 @@ public interface Search<S, M> {
      * The move the search prefers in {@code state}, chosen from {@link GameRules#getLegalMoves}.
      *
      * <p>Called only when at least one legal move exists; a forced pass (empty legal-move list) is
-     * handled by the caller — the human submits it explicitly and the server auto-passes for the
-     * bot (spec §6/§9) — not by the search.
+     * handled by the caller, the human submits it explicitly and the server auto-passes for the
+     * bot (spec §6/§9), not by the search.
      */
     M bestMove(S state);
 }

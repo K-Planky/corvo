@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Import;
  * Regression guard for the move anti-cheat status codes over a <em>real</em> HTTP server (JDK
  * {@link HttpClient} against the live port), not MockMvc. The {@link GameMoveAuthorizationTest}
  * MockMvc suite asserts the same 403/409/422 verdicts, but MockMvc does not perform the servlet
- * container's internal ERROR dispatch — so it cannot catch the failure this test exists for: a
+ * container's internal ERROR dispatch, so it cannot catch the failure this test exists for: a
  * {@code @ResponseStatus} exception forwards to {@code /error}, and under {@code STATELESS} sessions
  * + a once-per-request JWT filter (which skips error dispatches) that re-dispatch was unauthenticated
  * and got overwritten with 401, masking the real status. The fix permits the ERROR dispatch in the
@@ -45,13 +45,13 @@ class MoveAuthorizationHttpStatusTest {
         String gameId = objectMapper.readTree(created.body()).get("id").asText();
         String movePath = "/api/games/" + gameId + "/moves";
 
-        // 403: a non-participant — the bug surfaced here as 401.
+        // 403: a non-participant, the bug surfaced here as 401.
         assertThat(post(movePath, "{\"position\":19}", outsiderToken).statusCode()).isEqualTo(403);
 
         // 422: the owner plays a1 (square 0), which is empty but brackets nothing.
         assertThat(post(movePath, "{\"position\":0}", ownerToken).statusCode()).isEqualTo(422);
 
-        // 401 must still mean unauthenticated — a missing token is genuinely rejected.
+        // 401 must still mean unauthenticated, a missing token is genuinely rejected.
         assertThat(post(movePath, "{\"position\":19}", null).statusCode()).isEqualTo(401);
     }
 

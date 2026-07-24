@@ -25,7 +25,7 @@ public class AuthService {
 
     /**
      * A throwaway BCrypt hash compared against when the username is unknown, so a missing user and a
-     * wrong password both pay the (~100ms) hashing cost — closes the timing side-channel that would
+     * wrong password both pay the (~100ms) hashing cost, closes the timing side-channel that would
      * otherwise let an attacker enumerate valid usernames.
      */
     private final String dummyHash;

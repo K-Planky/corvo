@@ -24,7 +24,7 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Matchmaking is event-driven (a WS push can open the game), so lifecycle decisions live in refs,
-  // not state. `settledRef` opens the matched game exactly once and, once set, blocks a late open —
+  // not state. `settledRef` opens the matched game exactly once and, once set, blocks a late open,
   // both the joiner's MATCHED response and its MATCH_FOUND push arrive, and a join can also resolve
   // MATCHED *after* the user cancels. `queuedRef` records that we may still be sitting in the server
   // queue (⇒ owe a DELETE). `joinRef` is the in-flight join POST, awaited before any DELETE so the
@@ -56,7 +56,7 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
   }
 
   // DELETE the queue once any in-flight join has completed (so the DELETE lands after the enqueue,
-  // never before it), but only if we might still be queued — a completed match already removed us.
+  // never before it), but only if we might still be queued, a completed match already removed us.
   async function leaveQueueWhenSettled() {
     try {
       await joinRef.current;
@@ -99,7 +99,7 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
       const res = await joinQueue();
       if (res.status === 'MATCHED' && res.gameId) {
         // The game exists and its MATCH_FOUND push also carries the state, so a failed fetch isn't
-        // fatal — fall back to the push rather than aborting a match the server already made.
+        // fatal, fall back to the push rather than aborting a match the server already made.
         try {
           openMatched(await getGame(res.gameId));
         } catch {
@@ -108,7 +108,7 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
       }
       // QUEUED: stay waiting; the MATCH_FOUND push will open the game.
     } catch (e) {
-      if (settledRef.current) return; // cancelled/unmounted while joining — ignore.
+      if (settledRef.current) return; // cancelled/unmounted while joining, ignore.
       settledRef.current = true;
       queuedRef.current = false;
       teardown();
@@ -145,7 +145,7 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
   }
 
   // Discard a resumable game. Confirm first (a delete is unrecoverable), then drop it from the list
-  // locally — no re-fetch needed since we know exactly which row went.
+  // locally, no re-fetch needed since we know exactly which row went.
   async function remove(id: string) {
     if (!window.confirm('Delete this match? This cannot be undone.')) return;
     try {
@@ -252,7 +252,7 @@ export default function Lobby({ user, onOpenGame, onLogout }: LobbyProps) {
                     {g.blackDiscs}–{g.whiteDiscs}
                   </span>
                 </button>
-                {/* Only single-player games are deletable — a multiplayer match is rated and shared
+                {/* Only single-player games are deletable, a multiplayer match is rated and shared
                     with an opponent (and, being locked, never appears here anyway). */}
                 {g.opponentType === 'HUMAN_VS_AI' && (
                   <button

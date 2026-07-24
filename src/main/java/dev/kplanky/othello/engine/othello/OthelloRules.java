@@ -53,7 +53,7 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
 
     /**
      * Bitboard of legal placements for a side holding {@code mine} against {@code theirs} with
-     * {@code empty} squares vacant — the perspective-free core of {@link #legalMoveMask(OthelloState)}.
+     * {@code empty} squares vacant, the perspective-free core of {@link #legalMoveMask(OthelloState)}.
      * Exposed so the evaluator can measure either side's mobility (spec §7) without reconstructing a
      * state just to flip the side to move, and without duplicating the eight-direction walk.
      */
@@ -117,7 +117,7 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
 
     /**
      * Bitboard of opponent discs flipped by placing a disc on {@code square} (0..63) for the side to
-     * move. Empty (0) means the placement brackets nothing — i.e. it is not a legal move.
+     * move. Empty (0) means the placement brackets nothing, i.e. it is not a legal move.
      *
      * <p>For each of the eight directions, walk the contiguous run of opponent discs starting just
      * past {@code square}; if that run is terminated by one of the mover's own discs, the whole run
@@ -142,16 +142,16 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
         return captured;
     }
 
-    /** Every square occupied — all 64 bits set. */
+    /** Every square occupied, all 64 bits set. */
     private static final long FULL_BOARD = -1L;
 
     /**
      * Whether the game has ended (spec §6/§14). Exactly two terminal conditions:
      *
      * <ul>
-     *   <li><b>Double pass</b> — both players passed in succession ({@code consecutivePasses == 2}).
+     *   <li><b>Double pass</b>, both players passed in succession ({@code consecutivePasses == 2}).
      *       A <em>single</em> pass does not end the game.</li>
-     *   <li><b>Board full</b> — every square is occupied.</li>
+     *   <li><b>Board full</b>, every square is occupied.</li>
      * </ul>
      *
      * <p>A wipeout (one side reduced to zero discs) is <em>not</em> a special terminal rule: the
@@ -166,7 +166,7 @@ public class OthelloRules implements GameRules<OthelloState, OthelloMove> {
     /**
      * The winner of a terminal game, or empty for a draw <em>or</em> a non-terminal state (spec
      * §6/§14). The winner is simply whoever holds more discs; an equal count is a draw. This also
-     * resolves a wipeout correctly — the surviving side has strictly more discs.
+     * resolves a wipeout correctly, the surviving side has strictly more discs.
      */
     @Override
     public Optional<Player> winner(OthelloState state) {

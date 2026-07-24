@@ -20,9 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Difficulty → engine mapping (spec §7). Pins each tier's distinct character — Easy is an
+ * Difficulty → engine mapping (spec §7). Pins each tier's distinct character, Easy is an
  * epsilon-random greedy, Medium a shallow alpha-beta with a blunder chance, Hard a depth-capped
- * iterative deepening — plus the fixed Elo labels, the tuning defaults, and the synchronous-think
+ * iterative deepening, plus the fixed Elo labels, the tuning defaults, and the synchronous-think
  * cap that keeps a Hard search from blocking the request thread. All without Spring or a real
  * search run, so it is fast and deterministic.
  */
@@ -36,7 +36,7 @@ class BotEngineTest {
         assertThat(engine.ratingFor(BotDifficulty.EASY)).isEqualTo(1000);
         assertThat(engine.ratingFor(BotDifficulty.MEDIUM)).isEqualTo(1500);
         assertThat(engine.ratingFor(BotDifficulty.HARD)).isEqualTo(1800);
-        // The rating is the enum's own constant — the engine just exposes it.
+        // The rating is the enum's own constant, the engine just exposes it.
         assertThat(BotDifficulty.HARD.rating()).isEqualTo(1800);
     }
 
@@ -47,7 +47,7 @@ class BotEngineTest {
             EpsilonRandomSearch<OthelloState, OthelloMove> easy = asEpsilonRandom(search);
             assertThat(easy.epsilon()).isEqualTo(0.30);
             assertThat(easy.delegate()).isInstanceOf(GreedySearch.class);
-            // The beginner character hinges on the *disc-count-only* heuristic — pin it, or a future
+            // The beginner character hinges on the *disc-count-only* heuristic, pin it, or a future
             // rewire to the full evaluator would silently strengthen Easy with every test green.
             assertThat(((GreedySearch<OthelloState, OthelloMove>) easy.delegate()).evaluator())
                     .isInstanceOf(DiscCountEvaluator.class);
@@ -132,7 +132,7 @@ class BotEngineTest {
         return new BotProperties(null, null, null, Duration.ofSeconds(60), null);
     }
 
-    /** Both the synchronous and the M8 async move chooser — the tier's character must match on each. */
+    /** Both the synchronous and the M8 async move chooser, the tier's character must match on each. */
     private static List<Search<OthelloState, OthelloMove>> bothPaths(BotEngine engine, BotDifficulty difficulty) {
         return List.of(engine.searchFor(difficulty), engine.asyncSearchFor(difficulty));
     }

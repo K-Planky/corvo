@@ -17,6 +17,11 @@
         <java.version>21</java.version>
         <!-- jjwt is not managed by the Spring Boot BOM; pin it explicitly. -->
         <jjwt.version>0.12.6</jjwt.version>
+        <!-- Override the Spring Boot BOM's managed driver: 42.7.11 carries CVE-2026-54291
+             (HIGH, CVSS 8.0), fixed in 42.7.12. Trivy's IMAGE scan gates on this; its filesystem
+             scan misses it because the version is BOM-managed and that scan runs offline, so it
+             never resolves the BOM. Drop this override once the BOM ships 42.7.12 or later. -->
+        <postgresql.version>42.7.12</postgresql.version>
     </properties>
     <dependencies>
         <dependency>

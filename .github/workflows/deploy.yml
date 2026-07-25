@@ -1,14 +1,15 @@
-# Continuous deployment (spec §12/§13). Runs ONLY after the CI workflow succeeds on main, so the
-# Semgrep + Trivy gates actually block a bad build from shipping, then builds & pushes the app
-# image to GHCR and pull-and-restarts the stack on the VM over SSH. Flyway migrations run on app
-# startup, so restarting the app applies any new migrations.
+# Continuous deployment to the kplanky.dev VPS (platform contract: vps-setup/DEPLOY.md).
+# Runs ONLY after the CI workflow succeeds on main, so the Semgrep + Trivy gates actually block a
+# bad build from shipping, then builds & pushes the image to GHCR and pull-and-restarts the stack
+# on the VM over SSH. Flyway migrations run on app startup, so restarting the app applies them.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
-#   DEPLOY_HOST    , VM public IP or hostname
-#   DEPLOY_USER    , non-root deploy user on the VM (in the docker group)
-#   DEPLOY_SSH_KEY , private SSH key whose public half is in that user's authorized_keys
-# The VM must already be logged in to GHCR (read-only PAT) so it can pull the private image,
-# see the deploy runbook.
+#   DEPLOY_HOST    139.99.90.117
+#   DEPLOY_USER    deploy          (docker group, no sudo)
+#   DEPLOY_SSH_KEY private half of ~/.ssh/ci_deploy_key
+#
+# The VM must already be logged in to GHCR as the deploy user (read-scoped PAT) so it can pull.
+# /srv/apps/othello/.env must exist on the VM with real secrets; CI never ships those.
 name: Deploy
 
 on:
@@ -17,9 +18,8 @@ on:
     types: [completed]
   workflow_dispatch:
 
-# Never run two deploys at once; let an in-flight deploy finish.
 concurrency:
-  group: deploy-production
+  group: deploy-othello
   cancel-in-progress: false
 
 permissions:
@@ -27,7 +27,8 @@ permissions:
   packages: write   # push the image to GHCR
 
 env:
-  IMAGE: ghcr.io/cs-muic/ssc-y25t3-project-pothello-solo
+  APP: othello
+  IMAGE: ghcr.io/k-planky/corvo
   # The exact commit CI validated (workflow_run), or the dispatch ref for a manual run.
   DEPLOY_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
@@ -61,13 +62,14 @@ jobs:
         with:
           context: .
           push: true
+          platforms: linux/amd64      # the VPS is amd64; an arm64-only image will not pull
           tags: |
             ${{ env.IMAGE }}:${{ env.DEPLOY_SHA }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to the VM (copy compose, pull & restart)
+      - name: Deploy to the VM
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -79,12 +81,32 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
           SSH="ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes ${DEPLOY_USER}@${DEPLOY_HOST}"
-          # Ship the latest compose + proxy config (secrets stay in the VM-local .env).
-          scp -i ~/.ssh/id_deploy -o IdentitiesOnly=yes \
-            compose.prod.yaml Caddyfile "${DEPLOY_USER}@${DEPLOY_HOST}:~/othello/"
-          # Pin this release by digest-stable :sha tag, pull, recreate, prune old images.
-          $SSH "cd ~/othello && \
+          SCP="scp -i ~/.ssh/id_deploy -o IdentitiesOnly=yes"
+
+          # First deploy creates the stack directory; .env is placed there by hand, once.
+          $SSH "mkdir -p /srv/apps/${APP}"
+
+          # Ship the stack definition and the edge route. Secrets stay on the VM.
+          $SCP deploy/compose.yaml "${DEPLOY_USER}@${DEPLOY_HOST}:/srv/apps/${APP}/compose.yaml"
+          $SCP deploy/site.caddy   "${DEPLOY_USER}@${DEPLOY_HOST}:/srv/edge/sites/${APP}.caddy"
+
+          # Pin this release by immutable :sha tag, pull, recreate, reload the edge, prune.
+          $SSH "cd /srv/apps/${APP} && \
             export APP_IMAGE='${IMAGE}:${DEPLOY_SHA}' && \
-            docker compose -f compose.prod.yaml pull && \
-            docker compose -f compose.prod.yaml up -d && \
+            docker compose pull && \
+            docker compose up -d && \
+            docker exec edge-caddy caddy reload --config /etc/caddy/Caddyfile && \
             docker image prune -f"
+
+      - name: Verify the deployment is serving
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 20); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+                     https://othello.kplanky.dev/health || echo 000)
+            if [ "$code" = "200" ]; then echo "healthy after ${i} attempt(s)"; exit 0; fi
+            echo "attempt ${i}: HTTP ${code}"
+            sleep 10
+          done
+          echo "did not become healthy; check: docker compose -f /srv/apps/othello/compose.yaml logs app"
+          exit 1

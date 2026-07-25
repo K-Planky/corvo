@@ -1,0 +1,74 @@
+# Production topology on the kplanky.dev VPS. Replaces the standalone compose.prod.yaml, which
+# bundled its own Caddy and published 80/443. The host now runs ONE shared edge proxy for every
+# app, so this stack publishes nothing and is reached through the external `edge` network by the
+# alias below. Full platform contract: vps-setup/DEPLOY.md on the deploy machine, /srv/DEPLOY.md
+# on the VM.
+#
+# Lives on the VM at /srv/apps/othello/compose.yaml, alongside a .env this repo never sees.
+name: othello
+
+services:
+  app:
+    # CI overrides this with an immutable :sha tag; :latest is the manual fallback.
+    image: ${APP_IMAGE:-ghcr.io/k-planky/corvo:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      # Uncapped, the JVM sizes its heap from HOST memory (~930 MB on this 3.7 GB box) because it
+      # reads /proc/meminfo, not the cgroup, unless a limit exists. The limit below is what makes
+      # this percentage mean anything, so the two always move together.
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60
+    deploy:
+      resources:
+        limits:
+          memory: 640m        # ~384 MB heap, rest for metaspace, threads, direct buffers
+    expose:
+      - "8080"                # internal only, never published to the host
+    healthcheck:
+      # /health is permitAll in SecurityConfig, so this needs no token. busybox wget ships in the
+      # temurin alpine runtime image.
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s       # Flyway migrations + Spring context on 2 vCPU
+    networks:
+      edge:
+        aliases:
+          - othello           # what the edge proxies to. Must stay unique across all apps.
+      internal:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    labels:
+      backup.pg: "1"          # opts this container into the host's nightly pg_dumpall
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal              # NOT on edge. The database is unreachable from the proxy network.
+
+volumes:
+  pgdata:
+
+networks:
+  edge:
+    external: true            # created once by the platform, shared by every app
+  internal:

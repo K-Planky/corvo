@@ -4,7 +4,7 @@
 # `reverse_proxy` passes Connection/Upgrade through transparently, so the M8 WebSocket at /ws
 # needs no special handling. TLS is provisioned automatically for this hostname on first request.
 # Keep `log`: Caddy access logging is per site block, there is no global switch.
-othello.kplanky.dev {
+corvo.kplanky.dev {
 	log
 	encode zstd gzip
 	reverse_proxy othello:8080

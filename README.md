@@ -69,7 +69,7 @@ startup.
 flowchart TB
     UI["React SPA (Corvo)<br/>thin client, renders server state"]
 
-    subgraph vm["DigitalOcean VM (Docker Compose)"]
+    subgraph vm["OVHcloud VPS (shared Caddy edge)"]
       Caddy["Caddy<br/>automatic HTTPS"]
       subgraph app["Spring Boot service"]
         REST["REST API /api<br/>validates every move: 403 / 409 / 422"]
@@ -195,7 +195,7 @@ high CVE. The scan reports are saved as build artifacts.
 
 A push to `main` that passes CI triggers the deploy workflow. It builds the production image, pushes
 it to the GitHub Container Registry tagged with the commit SHA and `latest`, then connects to the
-DigitalOcean VM over SSH and runs `docker compose pull && up -d`. Because Flyway applies migrations
+OVHcloud VPS over SSH and runs `docker compose pull && up -d`. Because Flyway applies migrations
 on startup, a deploy also applies any new schema changes. Caddy issues and renews the TLS
 certificate automatically, and the app port is never published to the host; only Caddy is.
 

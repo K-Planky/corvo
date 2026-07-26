@@ -1,2 +1,6 @@
 /mvnw text eol=lf
 *.cmd text eol=crlf
+
+# initdb scripts run inside a Linux container; CRLF here means "bad interpreter" on a
+# volume rebuild, which would not surface until then.
+*.sh text eol=lf

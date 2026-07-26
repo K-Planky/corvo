@@ -19,8 +19,9 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      # The least-privilege role, NOT the postgres superuser. See initdb/01-app-role.sh.
+      DB_USER: ${DB_APP_USER}
+      DB_PASSWORD: ${DB_APP_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       # Uncapped, the JVM sizes its heap from HOST memory (~930 MB on this 3.7 GB box) because it
       # reads /proc/meminfo, not the cgroup, unless a limit exists. The limit below is what makes
@@ -53,12 +54,19 @@ services:
       backup.pg: "1"          # opts this container into the host's nightly pg_dumpall
     environment:
       POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Superuser: initdb, the healthcheck and the nightly pg_dumpall use it (pg_dumpall reads
+      # pg_authid and requires superuser). Flyway and the app run as DB_APP_USER instead.
+      POSTGRES_USER: ${DB_ADMIN_USER}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
+      # Read by initdb/01-app-role.sh on first boot to create the app's own role.
+      DB_APP_USER: ${DB_APP_USER}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Runs only on first initialization of an empty data directory.
+      - ./initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_ADMIN_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5

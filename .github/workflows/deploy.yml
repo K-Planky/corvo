@@ -94,8 +94,12 @@ jobs:
           # First deploy creates the stack directory; .env is placed there by hand, once.
           $SSH "mkdir -p /srv/apps/${APP}"
 
-          # Ship the stack definition and the edge route. Secrets stay on the VM.
+          # Ship the stack definition, the initdb scripts and the edge route. Secrets stay on the
+          # VM. initdb only runs on a FIRST boot against an empty data directory, so shipping it
+          # every time is a no-op for a live stack; it is what makes a rebuilt volume come back
+          # with the same least-privilege app role.
           $SCP deploy/compose.yaml "${DEPLOY_USER}@${DEPLOY_HOST}:/srv/apps/${APP}/compose.yaml"
+          $SCP -r deploy/initdb    "${DEPLOY_USER}@${DEPLOY_HOST}:/srv/apps/${APP}/"
           $SCP deploy/site.caddy   "${DEPLOY_USER}@${DEPLOY_HOST}:/srv/edge/sites/${APP}.caddy"
 
           # Pin this release by immutable :sha tag, pull, recreate, reload the edge, prune.

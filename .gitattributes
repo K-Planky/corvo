@@ -1,6 +1,8 @@
 /mvnw text eol=lf
 *.cmd text eol=crlf
 
-# initdb scripts run inside a Linux container; CRLF here means "bad interpreter" on a
-# volume rebuild, which would not surface until then.
+# Everything under deploy/ is scp'd to a Linux VM and read by Linux tools, so it must be LF
+# regardless of the checkout platform. An initdb script with CRLF fails inside the postgres
+# container with "bad interpreter", and that would not surface until a volume rebuild.
+deploy/** text eol=lf
 *.sh text eol=lf

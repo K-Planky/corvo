@@ -7,9 +7,11 @@
 corvo.kplanky.dev {
 	log
 	encode zstd gzip
-	# Caddy redirects http to https but sends no HSTS of its own, so the FIRST plaintext request
-	# to this host still happens. One year, this host only: includeSubDomains/preload would commit
-	# every *.kplanky.dev name, which is a separate call.
-	header Strict-Transport-Security "max-age=31536000"
+	# Caddy redirects http to https but sends no HSTS of its own. Note `.dev` is an HSTS-preloaded
+	# TLD (the whole TLD, with includeSubDomains), so a preload-list-aware browser already refuses
+	# plaintext to this host and never sends that first cleartext request; this header is for the
+	# clients that ship no preload list. includeSubDomains and preload cost nothing to assert for
+	# the same reason: the TLD entry already commits every name under the domain.
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 	reverse_proxy othello:8080
 }

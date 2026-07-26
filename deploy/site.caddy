@@ -7,5 +7,9 @@
 corvo.kplanky.dev {
 	log
 	encode zstd gzip
+	# Caddy redirects http to https but sends no HSTS of its own, so the FIRST plaintext request
+	# to this host still happens. One year, this host only: includeSubDomains/preload would commit
+	# every *.kplanky.dev name, which is a separate call.
+	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy othello:8080
 }

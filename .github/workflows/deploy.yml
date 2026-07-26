@@ -36,11 +36,19 @@ jobs:
   deploy:
     name: Build, push & deploy
     runs-on: ubuntu-latest
-    # Gate: manual dispatch, OR CI concluded success on the main branch.
+    # Gate: manual dispatch, OR CI concluded success on a push to THIS repo's main.
+    #
+    # head_branch alone is not a trust boundary: on a workflow_run fired by a fork's pull request
+    # it is the FORK's branch name, so a fork branch named `main` passes. workflow_run is a
+    # privileged trigger (it carries this repo's secrets), and the checkout below takes
+    # workflow_run.head_sha, so that combination would build and deploy fork-authored code to the
+    # VPS. Pin the event type and the head repository as well.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     steps:
       - name: Checkout the validated commit
         uses: actions/checkout@v5
